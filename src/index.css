@@ -1,0 +1,296 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.file-upload-container {
+  width: 100%;
+  max-width: 850px;
+  margin: auto;
+  background-color: #161619;
+}
+.dropzone {
+  background: #202020;
+  width: 112px;
+  height: 112px;
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  cursor: pointer;
+  border-radius: 12px;
+  /* display: flex;
+  flex-wrap: wrap; */
+  /* border: 2px dashed #444; */
+  /* margin-left: auto;
+  margin-right: auto; */
+}
+
+.support {
+  color: rgba(255, 255, 255, 0.7);
+  /* font-family: Figtree; */
+  font-size: 12px;
+  font-style: italic;
+  font-weight: 500;
+  line-height: normal;
+}
+.preview-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.preview-item {
+  border-radius: 12px;
+  position: relative;
+  width: 112px;
+  height: 112px;
+}
+
+.preview-image,
+.preview-video {
+  border-radius: 12px;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.remove-btn {
+  border-radius: 100px;
+  background: rgba(0, 0, 0, 0.34);
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  /* color: white; */
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 5px 5px;
+}
+.submit-btn {
+  margin-top: 10px;
+  padding: 10px 20px;
+  background-color: #447eff;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+.ant-modal {
+  /* background-color: #161619 !important; */
+  width: 850px !important;
+}
+
+.ant-modal-content {
+  background-color: #161619 !important;
+}
+
+.ant-modal-header {
+  background-color: #161619 !important;
+}
+
+@media screen and (max-width: 768px) {
+  .dropzone {
+    width: 100px;
+    height: 100px;
+  }
+  .preview-item {
+    position: relative;
+    width: 100px;
+    height: 100px;
+  }
+}
+
+@media screen and (max-width: 500px) {
+  .dropzone {
+    width: 80px;
+    height: 80px;
+  }
+  .preview-item {
+    position: relative;
+    width: 80px;
+    height: 80px;
+  }
+}
+
+.thumbnail-preview {
+  position: relative;
+  width: 112px;
+  height: 112px;
+}
+
+.save {
+  border-radius: var(--Height-And-Sizes-12, 12px);
+  border: 1px solid #ff885c;
+  background: var(
+    --Orange,
+    linear-gradient(216deg, #ff8517 16.19%, #f54100 55.29%, #ff4e00 94.38%)
+  );
+  box-shadow: 0px 0px 1.3px 1px rgba(120, 58, 13, 0.25) inset;
+}
+
+.save:hover {
+  background: var(
+    --Orange,
+    linear-gradient(216deg, #f47405 16.19%, #ff4603 55.29%, #ff4e00 94.38%)
+  ) !important;
+}
+/* .des {
+  border: none !important;
+} */
+
+.des:hover,
+.des:focus {
+  background-color: transparent !important;
+  /* border: none !important; */
+}
+
+@media screen and (max-width: 768px) {
+  .thumbnail-preview {
+    position: relative;
+    width: 100px;
+    height: 100px;
+  }
+}
+
+@media screen and (max-width: 500px) {
+  .thumbnail-preview {
+    position: relative;
+    width: 80px;
+    height: 80px;
+  }
+}
+
+.description-column {
+  width: 100%; /* Default width */
+}
+
+@media (max-width: 768px) {
+  .description-column {
+    max-width: 150px;
+  }
+}
+
+body {
+  background-color: #141414;
+}
+
+.add-btn {
+  border-radius: var(--Height-And-Sizes-12, 12px);
+  border: 1px solid #ff885c;
+  background: var(
+    --Orange,
+    linear-gradient(216deg, #ff8517 16.19%, #f54100 55.29%, #ff4e00 94.38%)
+  );
+  box-shadow: 0px 0px 1.3px 1px rgba(120, 58, 13, 0.25) inset;
+  color: #fff;
+  font-variant-numeric: lining-nums proportional-nums;
+  font-feature-settings: "dlig" on;
+  text-shadow: 0px 0px 3.2px rgba(255, 236, 61, 0.25);
+  font-family: Inter;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px; /* 142.857% */
+  letter-spacing: 0.56px;
+}
+
+.add-btn:hover {
+  background: var(
+    --Orange,
+    linear-gradient(216deg, #ff8517 16.19%, #ff4400 55.29%, #ff4d00 94.38%)
+  ) !important;
+}
+
+.select-pub {
+  color: #fff;
+  font-variant-numeric: lining-nums proportional-nums;
+  font-feature-settings: "dlig" on;
+  text-shadow: 0px 0px 3.2px rgba(255, 236, 61, 0.25);
+  font-family: Inter;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px; /* 142.857% */
+  letter-spacing: 0.56px;
+}
+
+.select-pub:hover {
+  border-color: #ff4400;
+}
+
+.ant-pagination-item-active {
+  background-color: #323235 !important;
+}
+
+.ant-pagination a {
+  color: white !important;
+}
+
+.action_edit,
+.action_del {
+  display: flex;
+  height: 36px;
+  justify-content: space-between;
+  align-items: center;
+  border-radius: 10.667px;
+  border: none;
+}
+.action_edit {
+  background: rgba(150, 198, 251, 0.12);
+}
+.action_del {
+  background: rgba(255, 139, 98, 0.12);
+}
+
+/* Add this to your CSS file */
+
+/* Custom styles for dark mode modal */
+.dark-modal .ant-modal-content {
+  background-color: #161619; /* Dark background color */
+  color: #fff; /* White text color */
+  border-radius: 8px;
+}
+
+.dark-modal .ant-modal-title {
+  font-size: 18px;
+  color: #ffffff;
+  font-weight: bold;
+}
+
+.dark-modal .ant-modal-confirm-title {
+  color: #ffffff;
+}
+
+.dark-modal .ant-btn-variant-solid {
+  background-color: #ff4d4f; /* Red delete button */
+  border: none !important;
+  color: white !important;
+}
+
+.dark-modal .ant-btn-variant-outlined {
+  border-color: #a9a9a9;
+  background-color: #29292b !important; /* Red delete button */
+  color: white;
+  border: none !important;
+}
+
+.dark-modal .ant-btn-variant-outlined:hover,
+.dark-modal .ant-btn-variant-outlined:focus {
+  color: white !important;
+  border: none !important;
+  background-color: #3e3e3f !important; /* Red delete button */
+}
+
+.dark-modal .ant-btn-variant-solid:hover,
+.dark-modal .ant-btn-variant-solid:focus {
+  color: #fff !important;
+  background-color: #ca2023 !important; /* Red delete button */
+}
+
+.dark-modal {
+  width: 415px !important;
+}
+
+/* Custom spinner color */
+.ant-spin-dot-item {
+  background-color: white !important; /* Replace with your desired color */
+}
