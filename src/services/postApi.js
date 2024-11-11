@@ -1,7 +1,5 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 const customFetchBaseQuery = async (args, api, extraOptions) => {
-  console.log("Request Arguments:", args); // Log args for debugging
-
   const result = await fetchBaseQuery({
     baseUrl: "https://cc3e497d.qdhgtch.com:2345/api/v1",
     prepareHeaders: (headers) => {

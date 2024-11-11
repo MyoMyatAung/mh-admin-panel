@@ -9,6 +9,7 @@ import {
   ConfigProvider,
   theme,
   Tag,
+  Spin,
 } from "antd";
 import { useGetListQuery, useDeletePostMutation } from "../services/postApi";
 import Fileupload from "../components/Fileupload";
@@ -28,6 +29,7 @@ const Home = () => {
   const [isFileUploadVisible, setFileUploadVisible] = useState(false);
   const [editingPost, setEditingPost] = useState(null); // Track if we are editing
   const [modalKey, setModalKey] = useState(0); // Key to force re-render
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
@@ -55,6 +57,7 @@ const Home = () => {
   };
 
   const handleStatusChange = (value) => {
+    refetch();
     setStatus(value);
     setPage(1);
   };
@@ -103,6 +106,12 @@ const Home = () => {
           {text}
         </div>
       ),
+    },
+    {
+      title: "Type",
+      dataIndex: "file_type",
+      key: "type",
+      width: 80,
     },
     {
       title: "Status",
@@ -245,20 +254,33 @@ const Home = () => {
           title={editingPost ? "Edit Post" : "Upload Post"}
           visible={isFileUploadVisible}
           onCancel={() => setFileUploadVisible(false)}
+          closable={!loading} // Disable close button while loading
+          maskClosable={!loading}
           footer={null}
         >
-          <Fileupload
-            setEditingPost={setEditingPost}
-            onClose={() => {
-              setFileUploadVisible(false);
-              setEditingPost(null);
-            }}
-            closeDiv={setFileUploadVisible}
-            setPage={setPage}
-            refetch={refetch}
-            post={editingPost} // Pass post data if editing
-            isVisible={isFileUploadVisible} // New prop to trigger reset on modal open
-          />
+          <Spin spinning={loading}>
+            <div
+              style={{
+                pointerEvents: loading ? "none" : "auto",
+                opacity: loading ? 0.5 : 1,
+              }}
+            >
+              <Fileupload
+                setEditingPost={setEditingPost}
+                onClose={() => {
+                  setFileUploadVisible(false);
+                  setEditingPost(null);
+                }}
+                setLoading={setLoading}
+                loading={loading}
+                closeDiv={setFileUploadVisible}
+                setPage={setPage}
+                refetch={refetch}
+                post={editingPost} // Pass post data if editing
+                isVisible={isFileUploadVisible} // New prop to trigger reset on modal open
+              />
+            </div>
+          </Spin>
         </Modal>
       </div>
     </ConfigProvider>

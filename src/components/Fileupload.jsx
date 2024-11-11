@@ -61,19 +61,22 @@ const Fileupload = ({
   setPage,
   refetch,
   post,
+  setLoading,
+  loading,
   isVisible,
 }) => {
   const [files, setFiles] = useState([]);
   const [thumbnail, setThumbnail] = useState(null);
   const [description, setDescription] = useState("");
   const [fileType, setFileType] = useState("image"); // Track if we're uploading images or videos
-  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState("published"); // Track if we're uploading images or videos
   const [createPost] = useCreatePostMutation();
 
   useEffect(() => {
     if (post) {
       setDescription(post.description || "");
       setFileType(post.file_type || "image");
+      setStatus(post.status || "published");
 
       if (post.files) {
         // Parse and set files for editing
@@ -83,12 +86,12 @@ const Fileupload = ({
             (file) => file.type === "video" || file.type === "image"
           )
         );
-        const thumbnailFile = parsedFiles.find(
-          (file) => file.type === "thumbnail"
-        );
-        setThumbnail(thumbnailFile || null);
+        if (parsedFiles[0].type === "video") {
+          setThumbnail(parsedFiles[0]?.thumbnail || null);
+        }
       }
     } else {
+      setStatus("published");
       setDescription("");
       setFiles([]);
       setThumbnail(null);
@@ -183,17 +186,7 @@ const Fileupload = ({
     }
 
     if (thumbnailImage) {
-      const { width, height } = await getImageDimensions(thumbnailImage);
-      const suffix = getFileSuffix(thumbnailImage.name || thumbnailImage.path);
-
-      setThumbnail({
-        thumbnail: thumbnailImage,
-        size: thumbnailImage.size,
-        width,
-        height,
-        suffix, // e.g., 'jpeg' or 'png'
-        type: "image",
-      });
+      setThumbnail(thumbnailImage);
     } else {
       message.error("Please upload a valid image for the thumbnail.");
     }
@@ -274,7 +267,7 @@ const Fileupload = ({
 
   const handleSubmit = async () => {
     setLoading(true);
-    if ((description && files.length > 0) || fileType === "") {
+    if (description && files.length > 0) {
       if (fileType === "image" || (fileType === "video" && thumbnail)) {
         try {
           const response = await axios.get(
@@ -304,13 +297,22 @@ const Fileupload = ({
                 // Determine key and content for each file
                 const isImage = fileType === "image";
                 const key = isImage
-                  ? `image_${file.image.name}`
-                  : `video_${file.video.name}`;
+                  ? `image_${Date.now()}_${Math.random()
+                      .toString(36)
+                      .substr(2, 9)}`
+                  : `video_${Date.now()}_${Math.random()
+                      .toString(36)
+                      .substr(2, 9)}`;
                 const fileContent = file.image || file.video;
+                const contentType = isImage
+                  ? file.image?.type
+                  : file.video?.type;
                 const uploadParams = {
                   Bucket: bucket,
                   Key: `${directory}/${key}`,
                   Body: fileContent,
+                  ContentType: contentType,
+                  ContentDisposition: "inline",
                 };
 
                 // Upload each file individually
@@ -319,10 +321,10 @@ const Fileupload = ({
                 // Get file metadata (example placeholders for demonstration)
                 const metadata = {
                   resourceURL: `${publicUrl}${directory}/${key}`,
-                  size: file.size,
-                  height: file.height || 0, // Replace with actual height if available
-                  width: file.width || 0, // Replace with actual width if available
-                  suffix: isImage ? "jpeg" : "mp4",
+                  size: file?.size.toString(),
+                  height: file?.height || "", // Replace with actual height if available
+                  width: file?.width || "", // Replace with actual width if available
+                  suffix: file?.suffix,
                   type: isImage ? "image" : "video",
                 };
 
@@ -347,29 +349,35 @@ const Fileupload = ({
 
           // Add thumbnail metadata if fileType is videos
           if (fileType === "video" && thumbnail) {
-            if (!thumbnail?.resourceURL) {
-              const thumbnailKey = `thumbnail_${thumbnail?.thumbnail.name}`;
+            if (typeof thumbnail !== "string") {
+              const thumbnailKey = `thumbnail_${Date.now()}_${Math.random()
+                .toString(36)
+                .substr(2, 9)}`;
+
               const thumbnailParams = {
                 Bucket: bucket,
                 Key: `${directory}/${thumbnailKey}`,
-                Body: thumbnail?.thumbnail,
+                Body: thumbnail,
+                ContentType: thumbnail?.type,
+                ContentDisposition: "inline",
               };
               await s3Client.send(new PutObjectCommand(thumbnailParams));
               const thumbnailUrl = `${publicUrl}${directory}/${thumbnailKey}`;
 
-              const thumbnailMetadata = {
-                resourceURL: thumbnailUrl,
-                size: thumbnail.size,
-                height: thumbnail.height || 0,
-                width: thumbnail.width || 0,
-                suffix: thumbnail.suffix,
-                type: "thumbnail",
-              };
-
-              // Add thumbnail to the uploaded files array
-              uploadedFileUrls.push(thumbnailMetadata);
+              if (
+                uploadedFileUrls.length > 0 &&
+                uploadedFileUrls[0].type === "video"
+              ) {
+                uploadedFileUrls[0].thumbnail = thumbnailUrl;
+              }
             } else {
-              uploadedFileUrls.push(thumbnail);
+              if (
+                uploadedFileUrls.length > 0 &&
+                uploadedFileUrls[0].type === "video"
+              ) {
+                uploadedFileUrls[0].thumbnail = thumbnail;
+              }
+              // uploadedFileUrls.push(thumbnail);
             }
           }
 
@@ -378,7 +386,7 @@ const Fileupload = ({
             description,
             files: uploadedFileUrls,
             file_type: fileType,
-            status: "published",
+            status,
             ...(post && { post_id: post.id }),
           };
 
@@ -410,13 +418,7 @@ const Fileupload = ({
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div
-        className="file-upload-container"
-        style={{
-          pointerEvents: loading ? "none" : "auto",
-          opacity: loading ? 0.5 : 1,
-        }}
-      >
+      <div className="file-upload-container">
         <TextArea
           type="text"
           placeholder="Write Description..."
@@ -437,6 +439,17 @@ const Fileupload = ({
         >
           <Option value="image">Images</Option>
           <Option value="video">Videos</Option>
+        </Select>
+        <Select
+          value={status}
+          onChange={(value) => {
+            setStatus(value);
+          }}
+          style={{ marginBottom: 10, marginLeft: 10 }}
+        >
+          <Option value="published">Published</Option>
+          <Option value="review">Review</Option>
+          <Option value="declined">Declined</Option>
         </Select>
 
         <div
@@ -520,8 +533,9 @@ const Fileupload = ({
                     <div className="thumbnail-preview mt-5">
                       <img
                         src={
-                          thumbnail?.resourceURL ||
-                          URL.createObjectURL(thumbnail?.thumbnail)
+                          typeof thumbnail === "string"
+                            ? thumbnail
+                            : URL.createObjectURL(thumbnail)
                         }
                         alt="thumbnail preview"
                         className="preview-image"
