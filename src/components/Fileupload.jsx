@@ -260,6 +260,10 @@ const Fileupload = ({
     });
   };
 
+  const getFileExtension = (filename) => {
+    return filename.split(".").pop();
+  };
+
   const getFileSuffix = (filePath) => {
     const parts = filePath.split(".");
     return parts.length > 1 ? parts[parts.length - 1] : ""; // Get the last part after the dot
@@ -299,10 +303,10 @@ const Fileupload = ({
                 const key = isImage
                   ? `image_${Date.now()}_${Math.random()
                       .toString(36)
-                      .substr(2, 9)}`
+                      .substr(2, 9)}.${file.suffix}`
                   : `video_${Date.now()}_${Math.random()
                       .toString(36)
-                      .substr(2, 9)}`;
+                      .substr(2, 9)}.${file.suffix}`;
                 const fileContent = file.image || file.video;
                 const contentType = isImage
                   ? file.image?.type
@@ -352,7 +356,7 @@ const Fileupload = ({
             if (typeof thumbnail !== "string") {
               const thumbnailKey = `thumbnail_${Date.now()}_${Math.random()
                 .toString(36)
-                .substr(2, 9)}`;
+                .substr(2, 9)}.${getFileExtension(thumbnail.name)}`;
 
               const thumbnailParams = {
                 Bucket: bucket,
