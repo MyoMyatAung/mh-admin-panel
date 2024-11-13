@@ -3,8 +3,11 @@ import { useDropzone } from "react-dropzone";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import { useCreatePostMutation } from "../services/postApi";
-import { message, Button, Select } from "antd";
+import {
+  useCreatePostMutation,
+  useGetCreatorsQuery,
+} from "../services/postApi";
+import { message, Button, Select, Checkbox } from "antd";
 import axios from "axios";
 import TextArea from "antd/es/input/TextArea";
 
@@ -70,13 +73,19 @@ const Fileupload = ({
   const [description, setDescription] = useState("");
   const [fileType, setFileType] = useState("image"); // Track if we're uploading images or videos
   const [status, setStatus] = useState("published"); // Track if we're uploading images or videos
+  const [user_id, setUserId] = useState(""); // Track if we're uploading images or videos
+  const [is_recommend, setIs_recommend] = useState(0); // Track if we're uploading images or videos
   const [createPost] = useCreatePostMutation();
+  const { data, isLoading: isUsersLoading } = useGetCreatorsQuery();
+  const users = data?.data;
 
   useEffect(() => {
     if (post) {
       setDescription(post.description || "");
       setFileType(post.file_type || "image");
       setStatus(post.status || "published");
+      setUserId(post?.user_id || "");
+      setIs_recommend(post?.is_recommend || 0);
 
       if (post.files) {
         // Parse and set files for editing
@@ -92,6 +101,8 @@ const Fileupload = ({
       }
     } else {
       setStatus("published");
+      setIs_recommend(0);
+      setUserId("");
       setDescription("");
       setFiles([]);
       setThumbnail(null);
@@ -174,6 +185,14 @@ const Fileupload = ({
     },
     [files, fileType]
   );
+
+  const onChange = (e) => {
+    if (e.target.checked) {
+      setIs_recommend(1);
+    } else {
+      setIs_recommend(0);
+    }
+  };
 
   const onThumbnailDrop = useCallback(async (acceptedFiles) => {
     const thumbnailImage = acceptedFiles.find((file) =>
@@ -386,7 +405,8 @@ const Fileupload = ({
           }
 
           const postPayload = {
-            user_id: 615270615,
+            is_recommend,
+            user_id: +user_id,
             description,
             files: uploadedFileUrls,
             file_type: fileType,
@@ -395,6 +415,7 @@ const Fileupload = ({
           };
 
           await createPost(postPayload).unwrap();
+          setIs_recommend(0);
           setDescription("");
           setFiles([]);
           setThumbnail(null);
@@ -419,6 +440,11 @@ const Fileupload = ({
       setLoading(false);
     }
   };
+  useEffect(() => {
+    if (!user_id && users?.length > 0) {
+      setUserId(users[0].id); // Set default user_id to the first user in the list
+    }
+  }, [users, user_id]);
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -455,6 +481,27 @@ const Fileupload = ({
           <Option value="review">Review</Option>
           <Option value="declined">Declined</Option>
         </Select>
+
+        <Select
+          value={user_id} // Bind selected user_id here
+          onChange={(value) => setUserId(value)} // Update user_id on selection
+          placeholder="Select User"
+          style={{ marginBottom: 10, marginLeft: 10, width: 120 }}
+          loading={isUsersLoading} // Show loading state when fetching users
+        >
+          {users?.map((user) => (
+            <Option key={user.id} value={user.id}>
+              {user.username}
+            </Option>
+          ))}
+        </Select>
+        <Checkbox
+          onChange={onChange}
+          checked={is_recommend === 1 ? true : false}
+          style={{ marginBottom: 10, marginLeft: 10 }}
+        >
+          Recommend
+        </Checkbox>
 
         <div
           className={

@@ -14,6 +14,7 @@ import {
 import { useGetListQuery, useDeletePostMutation } from "../services/postApi";
 import Fileupload from "../components/Fileupload";
 import Navbar from "../components/Navbar";
+import { useNavigate } from "react-router-dom";
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -184,12 +185,13 @@ const Home = () => {
       }}
     >
       <div style={{ padding: 20 }} className="container mx-auto">
-        <Navbar />
+        <Navbar status={false} />
 
         <div
           style={{
             display: "flex",
             alignItems: "center",
+
             marginBottom: 20,
             marginTop: 20,
           }}

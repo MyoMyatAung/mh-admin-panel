@@ -3,6 +3,14 @@ const customFetchBaseQuery = async (args, api, extraOptions) => {
   const result = await fetchBaseQuery({
     baseUrl: "https://cc3e497d.qdhgtch.com:2345/api/v1",
     prepareHeaders: (headers) => {
+      // Get token from localStorage
+      const token = localStorage.getItem("token");
+
+      // If a token exists, add it to the headers
+      if (token) {
+        headers.set("Authorization", `Bearer ${token}`);
+      }
+
       return headers;
     },
   })(args, api, extraOptions);
@@ -23,6 +31,20 @@ export const PostApi = createApi({
         url: `panel/post/list?page=${data?.page}&status=${data?.status}`,
       }),
     }),
+    getCreators: builder.query({
+      query: () => ({
+        url: `panel/post/creator/list`,
+      }),
+    }),
+    actionCreator: builder.mutation({
+      query: (data) => ({
+        url: `panel/post/creator/action`,
+        method: "POST",
+        body: data,
+      }),
+      transformResponse: (response) => response,
+    }),
+
     CreatePost: builder.mutation({
       query: (data) => ({
         url: `panel/post/save`,
@@ -42,5 +64,10 @@ export const PostApi = createApi({
   }),
 });
 
-export const { useCreatePostMutation, useDeletePostMutation, useGetListQuery } =
-  PostApi;
+export const {
+  useCreatePostMutation,
+  useDeletePostMutation,
+  useGetListQuery,
+  useGetCreatorsQuery,
+  useActionCreatorMutation,
+} = PostApi;
