@@ -31,6 +31,16 @@ export const PostApi = createApi({
         url: `panel/post/list?page=${data?.page}&status=${data?.status}`,
       }),
     }),
+    getCommentList: builder.query({
+      query: ({ page, id }) => ({
+        url: `panel/post/comment/list?post_id=${id}&page=${page}`,
+      }),
+    }),
+    getReplyList: builder.query({
+      query: ({ pageReply, selectedCommentId }) => ({
+        url: `panel/post/reply/list?comment_id=${selectedCommentId}&page=${pageReply}`,
+      }),
+    }),
     getCreators: builder.query({
       query: () => ({
         url: `panel/post/creator/list`,
@@ -61,6 +71,22 @@ export const PostApi = createApi({
       }),
       transformResponse: (response) => response,
     }),
+    DeleteComment: builder.mutation({
+      query: (data) => ({
+        url: `panel/post/comment/delete`,
+        method: "POST",
+        body: { id: data?.id, is_reply: data?.is_reply },
+      }),
+      transformResponse: (response) => response,
+    }),
+    UpdateComment: builder.mutation({
+      query: (data) => ({
+        url: `panel/post/comment/status/update`,
+        method: "POST",
+        body: { id: data?.id, is_reply: data?.is_reply, status: data?.status },
+      }),
+      transformResponse: (response) => response,
+    }),
   }),
 });
 
@@ -70,4 +96,8 @@ export const {
   useGetListQuery,
   useGetCreatorsQuery,
   useActionCreatorMutation,
+  useGetCommentListQuery,
+  useDeleteCommentMutation,
+  useUpdateCommentMutation,
+  useGetReplyListQuery,
 } = PostApi;

@@ -14,9 +14,8 @@ import {
 import { useGetListQuery, useDeletePostMutation } from "../services/postApi";
 import Fileupload from "../components/Fileupload";
 import Navbar from "../components/Navbar";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
-const { Title } = Typography;
 const { Option } = Select;
 
 const Home = () => {
@@ -106,6 +105,23 @@ const Home = () => {
         >
           {text}
         </div>
+      ),
+    },
+    {
+      title: "Comments",
+      key: "comments",
+      dataIndex: "comments",
+      render: (text, record) => (
+        <Link
+          to={`/comments/${record.id}`}
+          style={{
+            textDecoration: "underline",
+            color: "#1890ff",
+            cursor: "pointer",
+          }}
+        >
+          {text || "Comments"}
+        </Link>
       ),
     },
     {

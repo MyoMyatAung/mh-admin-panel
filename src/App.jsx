@@ -5,6 +5,7 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import ProtectedRoute from "./utils/protectRoute";
 import User from "./pages/User";
+import Comment from "./pages/Comment";
 
 function App() {
   return (
@@ -23,6 +24,14 @@ function App() {
         element={
           <ProtectedRoute>
             <User />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/comments/:id"
+        element={
+          <ProtectedRoute>
+            <Comment />
           </ProtectedRoute>
         }
       />
