@@ -18,13 +18,14 @@ import {
 } from "../services/postApi";
 
 const User = () => {
+  const [page, setPage] = useState(1);
   const [userCreate, setUserCreate] = useState(false);
 
   const [loading, setLoading] = useState(false);
-  const { data, isLoading, isFetching, refetch } = useGetCreatorsQuery();
+  const { data, isLoading, isFetching, refetch } = useGetCreatorsQuery({page});
   const [actionUser, { isLoading: isDeleting }] = useActionCreatorMutation();
 
-  const users = data?.data;
+  const users = data?.data?.list || [];
 
   const confirmDelete = (id) => {
     Modal.confirm({
@@ -149,6 +150,13 @@ const User = () => {
             dataSource={users || []}
             loading={isFetching || isLoading}
             rowKey="id"
+            pagination={{
+              current: data?.data?.page,
+              total: data?.data?.total,
+              pageSize: data?.data?.pageSize,
+              onChange: (page) => setPage(page),
+              showSizeChanger: false,
+            }}
             scroll={{ x: 600 }}
           />
         </div>

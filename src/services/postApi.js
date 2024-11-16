@@ -42,8 +42,8 @@ export const PostApi = createApi({
       }),
     }),
     getCreators: builder.query({
-      query: () => ({
-        url: `panel/post/creator/list`,
+      query: ({page}) => ({
+        url: `panel/post/creator/list?page=${page}`,
       }),
     }),
     actionCreator: builder.mutation({
