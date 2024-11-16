@@ -146,7 +146,7 @@ const Comment = () => {
       ),
     },
     {
-      title: "Unapprove",
+      title: "Unapprove Reply",
       dataIndex: "unapprove_reply_count",
       key: "unapprove_reply_count",
     },

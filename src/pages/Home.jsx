@@ -108,6 +108,11 @@ const Home = () => {
       ),
     },
     {
+      title: "Unapprove Comments",
+      dataIndex: "unapprove_comment_count",
+      key: "unapprove_comment_count",
+    },
+    {
       title: "Comments",
       key: "comments",
       dataIndex: "comments",
