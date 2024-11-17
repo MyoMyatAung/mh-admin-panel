@@ -76,8 +76,8 @@ const Fileupload = ({
   const [user_id, setUserId] = useState(""); // Track if we're uploading images or videos
   const [is_recommend, setIs_recommend] = useState(0); // Track if we're uploading images or videos
   const [createPost] = useCreatePostMutation();
-  const { data, isLoading: isUsersLoading } = useGetCreatorsQuery();
-  const users = data?.data;
+  const { data, isLoading: isUsersLoading } = useGetCreatorsQuery({ page: 1, pageSize: 30 });
+  const users = data?.data?.list || [];
 
   useEffect(() => {
     if (post) {
@@ -523,9 +523,9 @@ const Fileupload = ({
                   : "Support format: MP4"}
               </p>
             </div>
-            <div className="preview-container mt-5">
+            <div className="mt-5 preview-container">
               <div {...getRootProps()} className="dropzone">
-                <div className="flex justify-center items-center">
+                <div className="flex items-center justify-center">
                   <input {...getInputProps()} />
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -556,14 +556,14 @@ const Fileupload = ({
           </div>
 
           {fileType === "video" && (
-            <div className="max-md:mt-2 mt-0">
+            <div className="mt-0 max-md:mt-2">
               <div>
                 <p className="my-2">Select Thumbnail</p>
                 <p className="support">Support format : PNG, JPG</p>
               </div>
               <div className="preview-container">
-                <div {...getThumbnailRootProps()} className="dropzone mt-5">
-                  <div className="flex justify-center items-center">
+                <div {...getThumbnailRootProps()} className="mt-5 dropzone">
+                  <div className="flex items-center justify-center">
                     <input {...getThumbnailInputProps()} />
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -581,7 +581,7 @@ const Fileupload = ({
                 </div>
                 {thumbnail && (
                   <>
-                    <div className="thumbnail-preview mt-5">
+                    <div className="mt-5 thumbnail-preview">
                       <img
                         src={
                           typeof thumbnail === "string"
@@ -616,7 +616,7 @@ const Fileupload = ({
             </div>
           )}
         </div>
-        <div className="flex justify-between items-center">
+        <div className="flex items-center justify-between">
           <div></div>
           <Button
             onClick={handleSubmit}
