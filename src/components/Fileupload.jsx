@@ -76,7 +76,10 @@ const Fileupload = ({
   const [user_id, setUserId] = useState(""); // Track if we're uploading images or videos
   const [is_recommend, setIs_recommend] = useState(0); // Track if we're uploading images or videos
   const [createPost] = useCreatePostMutation();
-  const { data, isLoading: isUsersLoading } = useGetCreatorsQuery({ page: 1, pageSize: 30 });
+  const { data, isLoading: isUsersLoading } = useGetCreatorsQuery({
+    page: 1,
+    pageSize: 30,
+  });
   const users = data?.data?.list || [];
 
   useEffect(() => {
@@ -354,12 +357,6 @@ const Fileupload = ({
                 // Add metadata to the array
                 uploadedFileUrls.push(metadata);
               } catch (error) {
-                console.error(
-                  `Failed to upload ${
-                    fileType === "image" ? "image" : "video"
-                  }:`,
-                  error
-                );
                 message.error(
                   `Failed to upload ${
                     fileType === "image" ? "image" : "video"

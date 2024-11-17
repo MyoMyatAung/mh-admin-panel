@@ -8,6 +8,7 @@ import {
   theme,
   Spin,
   Tag,
+  Select,
 } from "antd";
 
 import Navbar from "../components/Navbar";
@@ -20,6 +21,8 @@ import {
 } from "../services/postApi";
 import { useParams } from "react-router-dom";
 
+const { Option } = Select;
+
 const Comment = () => {
   const { id } = useParams();
 
@@ -27,7 +30,15 @@ const Comment = () => {
   const [pageReply, setPageReply] = useState(1);
 
   const [replyModalVisible, setReplyModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false); // Modal for bulk edit comments/replies
   const [selectedCommentId, setSelectedCommentId] = useState(null);
+
+  const [selectedRowKeys, setSelectedRowKeys] = useState([]); // State for selected rows for comments
+  const [selectedReplyRowKeys, setSelectedReplyRowKeys] = useState([]); // State for selected rows for replies
+
+  const [selectedStatus, setSelectedStatus] = useState(1); // Status for bulk edit
+  const [editTarget, setEditTarget] = useState("comments"); // 'comments' or 'replies'
+
   const [deleteComment, { isLoading: isDeleting }] = useDeleteCommentMutation();
   const {
     data: res,
@@ -42,22 +53,23 @@ const Comment = () => {
   } = useGetReplyListQuery(
     { pageReply, selectedCommentId },
     {
-      skip: !selectedCommentId, // Skip the API call if no comment is selected
+      skip: !selectedCommentId,
     }
   );
   const [updateComment, { isLoading: isUpdating }] = useUpdateCommentMutation();
 
   const comments = res?.data.list;
 
-  const confirmDelete = (id, isReply = 0) => {
+  const confirmDelete = (ids, isReply = 0) => {
     Modal.confirm({
-      title: `Are you sure you want to delete this ${
-        isReply ? "reply" : "comment"
+      title: `Are you sure you want to delete the selected ${
+        isReply ? "replies" : "comments"
       }?`,
       okText: "Delete",
       cancelText: "Cancel",
-      okButtonProps: { loading: isDeleting },
-      onOk: () => handleDelete(id, isReply),
+      loading: isDeleting,
+
+      onOk: () => handleDelete(ids, isReply),
       className: "dark-modal",
     });
   };
@@ -69,17 +81,16 @@ const Comment = () => {
       } for this ${isReply ? "reply" : "comment"}?`,
       okText: "Change",
       cancelText: "Cancel",
-      okButtonProps: { loading: isUpdating },
-      onOk: () => handleEditConfirm(record, isReply),
+      loading: isUpdating,
+      onOk: () => handleEditConfirmOne(record, isReply),
       className: "dark-modal",
     });
   };
 
-  const handleEditConfirm = async (record, isReply = 0) => {
-    console.log(isReply);
+  const handleEditConfirmOne = async (record, isReply = 0) => {
     try {
       await updateComment({
-        id: record?.id,
+        ids: [record?.id],
         is_reply: isReply,
         status: record?.status === 1 ? 0 : 1,
       }).unwrap();
@@ -88,22 +99,57 @@ const Comment = () => {
         `Successfully updated the ${isReply ? "reply" : "comment"}`
       );
     } catch (error) {
-      console.log(error);
       message.error(`Failed to update the ${isReply ? "reply" : "comment"}`);
     }
   };
 
-  const handleDelete = async (id, isReply = 0) => {
+  const handleBulkEdit = async () => {
+    const target =
+      editTarget === "comments" ? selectedRowKeys : selectedReplyRowKeys;
+    const isReply = editTarget === "replies" ? 1 : 0;
+
     try {
-      await deleteComment({ id, is_reply: isReply }).unwrap();
+      await updateComment({
+        ids: target,
+        is_reply: isReply,
+        status: selectedStatus,
+      }).unwrap();
       isReply ? refetchReplies() : refetch();
       message.success(
-        `Successfully deleted the ${isReply ? "reply" : "comment"}`
+        `Successfully updated the selected ${isReply ? "replies" : "comments"}`
       );
+      setEditModalVisible(false);
     } catch (error) {
-      message.error(`Failed to delete the ${isReply ? "reply" : "comment"}`);
+      message.error(
+        `Failed to update the selected ${isReply ? "replies" : "comments"}`
+      );
     }
   };
+
+  const handleDelete = async (ids, isReply = 0) => {
+    try {
+      await deleteComment({ ids, is_reply: isReply }).unwrap();
+      isReply ? refetchReplies() : refetch();
+      // Remove deleted IDs from the selected keys
+      if (isReply) {
+        setSelectedReplyRowKeys((prevKeys) =>
+          prevKeys.filter((key) => !ids.includes(key))
+        );
+      } else {
+        setSelectedRowKeys((prevKeys) =>
+          prevKeys.filter((key) => !ids.includes(key))
+        );
+      }
+      message.success(
+        `Successfully deleted the selected ${isReply ? "replies" : "comments"}`
+      );
+    } catch (error) {
+      message.error(
+        `Failed to delete the selected ${isReply ? "replies" : "comments"}`
+      );
+    }
+  };
+
   const getStatusTag = (status) => {
     switch (status) {
       case 1:
@@ -114,9 +160,10 @@ const Comment = () => {
         return <Tag>{status}</Tag>;
     }
   };
+
   const handleViewReplies = (commentId) => {
-    setSelectedCommentId(commentId); // Set the comment ID to fetch replies
-    setReplyModalVisible(true); // Open the reply modal
+    setSelectedCommentId(commentId);
+    setReplyModalVisible(true);
   };
 
   const columns = [
@@ -170,10 +217,10 @@ const Comment = () => {
       ),
     },
     {
-      title: "status",
+      title: "Status",
       key: "status",
       width: 100,
-      render: (data) => getStatusTag(data?.status), // Use the getStatusTag function here
+      render: (data) => getStatusTag(data?.status),
     },
     {
       title: "Actions",
@@ -209,7 +256,7 @@ const Comment = () => {
             type="button"
             className="action_del"
             danger
-            onClick={() => confirmDelete(record.id)}
+            onClick={() => confirmDelete([record.id])}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -229,6 +276,16 @@ const Comment = () => {
     },
   ];
 
+  const rowSelectionComments = {
+    selectedRowKeys,
+    onChange: (selectedKeys) => setSelectedRowKeys(selectedKeys),
+  };
+
+  const rowSelectionReplies = {
+    selectedRowKeys: selectedReplyRowKeys,
+    onChange: (selectedKeys) => setSelectedReplyRowKeys(selectedKeys),
+  };
+
   return (
     <ConfigProvider
       theme={{
@@ -241,8 +298,32 @@ const Comment = () => {
       <div style={{ padding: 20 }} className="container mx-auto">
         <Navbar status={true} />
 
+        {/* Bulk Actions for Comments */}
+        {selectedRowKeys.length > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <Button
+              type="primary"
+              onClick={() => {
+                setEditTarget("comments");
+                setEditModalVisible(true);
+              }}
+              style={{ marginRight: 8 }}
+            >
+              Edit Selected
+            </Button>
+            <Button
+              danger
+              onClick={() => confirmDelete(selectedRowKeys)}
+              loading={isDeleting}
+            >
+              Delete Selected
+            </Button>
+          </div>
+        )}
+
         <div style={{ overflowX: "auto" }}>
           <Table
+            rowSelection={rowSelectionComments}
             columns={columns}
             dataSource={comments || []}
             loading={isFetching || isLoading}
@@ -262,12 +343,40 @@ const Comment = () => {
         <Modal
           title="Replies"
           visible={replyModalVisible}
-          onCancel={() => setReplyModalVisible(false)}
-          footer={null}
+          onCancel={() => {
+            setReplyModalVisible(false);
+            setSelectedReplyRowKeys([]);
+          }}
+          footer={
+            selectedReplyRowKeys.length > 0 && (
+              <>
+                <Button
+                  type="primary"
+                  onClick={() => {
+                    setEditTarget("replies");
+                    setEditModalVisible(true);
+                  }}
+                  style={{ marginRight: 8 }}
+                >
+                  Edit Selected
+                </Button>
+                <Button
+                  danger
+                  onClick={() => confirmDelete(selectedReplyRowKeys, 1)}
+                  loading={isDeleting}
+                >
+                  Delete Selected
+                </Button>
+              </>
+            )
+          }
+          style={{ zIndex: 1050 }} // Higher z-index for the edit modal
+          forceRender
           width={800}
         >
           <Spin spinning={isFetchingReplies}>
             <Table
+              rowSelection={rowSelectionReplies}
               dataSource={replies?.data?.list || []}
               columns={[
                 {
@@ -321,7 +430,7 @@ const Comment = () => {
                         type="button"
                         className="action_del"
                         danger
-                        onClick={() => confirmDelete(record.id, 1)}
+                        onClick={() => confirmDelete([record.id], 1)}
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -350,6 +459,28 @@ const Comment = () => {
               }}
             />
           </Spin>
+        </Modal>
+
+        {/* Modal for Bulk Edit */}
+        <Modal
+          title={`Edit Selected ${
+            editTarget === "comments" ? "Comments" : "Replies"
+          }`}
+          visible={editModalVisible}
+          onCancel={() => setEditModalVisible(false)}
+          onOk={handleBulkEdit}
+          style={{ zIndex: 99999 }} // Higher z-index for the edit modal
+          confirmLoading={isUpdating} // Add loading state to OK button
+          forceRender // Ensure proper rendering order
+        >
+          <Select
+            value={selectedStatus}
+            onChange={(value) => setSelectedStatus(value)}
+            style={{ width: "100%" }}
+          >
+            <Option value={1}>Approved</Option>
+            <Option value={0}>Pending</Option>
+          </Select>
         </Modal>
       </div>
     </ConfigProvider>

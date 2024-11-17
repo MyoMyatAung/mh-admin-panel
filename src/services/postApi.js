@@ -42,7 +42,7 @@ export const PostApi = createApi({
       }),
     }),
     getCreators: builder.query({
-      query: ({page, pageSize}) => ({
+      query: ({ page, pageSize }) => ({
         url: `panel/post/creator/list?page=${page}&pageSize=${pageSize || 10}`,
       }),
     }),
@@ -75,7 +75,7 @@ export const PostApi = createApi({
       query: (data) => ({
         url: `panel/post/comment/delete`,
         method: "POST",
-        body: { id: data?.id, is_reply: data?.is_reply },
+        body: { ids: data?.ids, is_reply: data?.is_reply },
       }),
       transformResponse: (response) => response,
     }),
@@ -83,7 +83,11 @@ export const PostApi = createApi({
       query: (data) => ({
         url: `panel/post/comment/status/update`,
         method: "POST",
-        body: { id: data?.id, is_reply: data?.is_reply, status: data?.status },
+        body: {
+          ids: data?.ids,
+          is_reply: data?.is_reply,
+          status: data?.status,
+        },
       }),
       transformResponse: (response) => response,
     }),
