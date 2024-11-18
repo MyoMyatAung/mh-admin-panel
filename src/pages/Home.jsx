@@ -3,7 +3,7 @@ import {
   Table,
   Button,
   Modal,
-  Typography,
+  Input,
   message,
   Select,
   ConfigProvider,
@@ -17,38 +17,48 @@ import Navbar from "../components/Navbar";
 import { Link } from "react-router-dom";
 
 const { Option } = Select;
+const { Search } = Input;
 
 const Home = () => {
+  const [type, setType] = useState("content");
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState("published");
+  const [query, setQuery] = useState(""); // State for selected rows for comments
+
   const { data, isLoading, isFetching, refetch } = useGetListQuery({
     page,
     status,
+    q: query, // Pass the query state here
+    type,
   });
   const [deletePost, { isLoading: isDeleting }] = useDeletePostMutation();
   const [isFileUploadVisible, setFileUploadVisible] = useState(false);
   const [editingPost, setEditingPost] = useState(null); // Track if we are editing
   const [modalKey, setModalKey] = useState(0); // Key to force re-render
   const [loading, setLoading] = useState(false);
+  const [selectedRowKeys, setSelectedRowKeys] = useState([]); // State for selected rows for comments
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
   }, [page]);
 
-  const confirmDelete = (id) => {
+  const confirmDelete = (ids) => {
     Modal.confirm({
       title: "Are you sure you want to delete this post?",
       okText: "Delete",
       cancelText: "Cancel",
       okButtonProps: { loading: isDeleting },
-      onOk: () => handleDelete(id),
+      onOk: () => handleDelete(ids),
       className: "dark-modal", // Add custom class here
     });
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (ids) => {
     try {
-      await deletePost(id).unwrap();
+      await deletePost(ids).unwrap();
+      setSelectedRowKeys((prevKeys) =>
+        prevKeys.filter((key) => !ids.includes(key))
+      );
       message.success("Post deleted successfully");
       refetch();
     } catch (error) {
@@ -81,6 +91,11 @@ const Home = () => {
     }
   };
 
+  const rowSelectionPosts = {
+    selectedRowKeys,
+    onChange: (selectedKeys) => setSelectedRowKeys(selectedKeys),
+  };
+
   const columns = [
     {
       title: "ID",
@@ -108,7 +123,25 @@ const Home = () => {
       ),
     },
     {
-      title: "Unapprove Comments",
+      title: "User_id",
+      dataIndex: "user_id",
+      key: "user_id",
+      width: 80,
+    },
+    {
+      title: "Nickname",
+      dataIndex: "nickname",
+      key: "nickname",
+      width: 80,
+    },
+    {
+      title: "Create_time",
+      dataIndex: "create_time",
+      key: "create_time",
+      width: 80,
+    },
+    {
+      title: "Unapprove",
       dataIndex: "unapprove_comment_count",
       key: "unapprove_comment_count",
     },
@@ -176,7 +209,7 @@ const Home = () => {
             type="button"
             className="action_del"
             danger
-            onClick={() => confirmDelete(record.id)}
+            onClick={() => confirmDelete([record.id])}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -196,6 +229,14 @@ const Home = () => {
     },
   ];
 
+  const handleTypeChange = (value) => {
+    setType(value);
+  };
+  const onSearch = (value, _e) => {
+    setQuery(value);
+    setPage(1);
+  };
+
   return (
     <ConfigProvider
       theme={{
@@ -210,53 +251,85 @@ const Home = () => {
 
         <div
           style={{
-            display: "flex",
-            alignItems: "center",
-
             marginBottom: 20,
             marginTop: 20,
           }}
+          className="max-md:flex-col max-md:flex-wrap max-md:items-start flex justify-between items-center"
         >
-          <Button
-            type="primary"
-            className="add-btn"
-            onClick={() => {
-              setEditingPost(null); // Clear editingPost for new post
-              setFileUploadVisible(true);
-            }}
-            style={{ marginRight: 20 }}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="14"
-              height="14"
-              viewBox="0 0 14 14"
-              fill="none"
+          <div className="flex items-center max-md:flex-wrap max-md:items-start">
+            <Button
+              type="primary"
+              className="add-btn mb-3"
+              onClick={() => {
+                setEditingPost(null); // Clear editingPost for new post
+                setFileUploadVisible(true);
+              }}
+              style={{ marginRight: 10 }}
             >
-              <path
-                d="M1 6.85007H13M7.15021 1L7.15021 13"
-                stroke="white"
-                stroke-width="2"
-                stroke-linecap="round"
-              />
-            </svg>
-            Create Post
-          </Button>
-          <Select
-            className="select-pub"
-            defaultValue="published"
-            value={status}
-            onChange={handleStatusChange}
-            style={{ width: 120 }}
-          >
-            <Option value="published">Published</Option>
-            <Option value="review">Review</Option>
-            <Option value="declined">Declined</Option>
-          </Select>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+              >
+                <path
+                  d="M1 6.85007H13M7.15021 1L7.15021 13"
+                  stroke="white"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
+              </svg>
+              Create Post
+            </Button>
+            <Select
+              className="select-pub mb-3"
+              defaultValue="published"
+              value={status}
+              onChange={handleStatusChange}
+              style={{ width: 120, marginRight: 10 }}
+            >
+              <Option value="published">Published</Option>
+              <Option value="review">Review</Option>
+              <Option value="declined">Declined</Option>
+            </Select>
+
+            {selectedRowKeys.length > 0 && (
+              <div className="mb-3">
+                <Button
+                  danger
+                  onClick={() => confirmDelete(selectedRowKeys)}
+                  loading={isDeleting}
+                >
+                  Delete Selected
+                </Button>
+              </div>
+            )}
+          </div>
+          <div className=" flex items-center max-md:flex-col max-md:items-start">
+            <Select
+              className="select-pub mb-3"
+              defaultValue="content"
+              value={type}
+              // size="large"
+              onChange={handleTypeChange}
+              style={{ width: 120, marginRight: 10 }}
+            >
+              <Option value="content">Content</Option>
+              <Option value="userid">UserId</Option>
+            </Select>
+            <Search
+              onSearch={onSearch}
+              placeholder="Search posts"
+              // size="large"
+              className="max-md:w-[280px] w-[300px] mb-3"
+            />
+          </div>
         </div>
 
         <div style={{ overflowX: "auto" }}>
           <Table
+            rowSelection={rowSelectionPosts}
             columns={columns}
             dataSource={data?.data?.list || []}
             loading={isFetching || isLoading}

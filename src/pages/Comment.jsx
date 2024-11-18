@@ -9,6 +9,7 @@ import {
   Spin,
   Tag,
   Select,
+  Input,
 } from "antd";
 
 import Navbar from "../components/Navbar";
@@ -22,11 +23,15 @@ import {
 import { useParams } from "react-router-dom";
 
 const { Option } = Select;
-
+const { Search } = Input;
 const Comment = () => {
   const { id } = useParams();
+  const [type, setType] = useState("content");
+  const [typeReply, setTypeReply] = useState("content");
 
   const [page, setPage] = useState(1);
+  const [query, setQuery] = useState(""); // State for selected rows for comments
+  const [queryReply, setQueryReply] = useState(""); // State for selected rows for comments
   const [pageReply, setPageReply] = useState(1);
 
   const [replyModalVisible, setReplyModalVisible] = useState(false);
@@ -45,13 +50,13 @@ const Comment = () => {
     refetch,
     isFetching,
     isLoading,
-  } = useGetCommentListQuery({ page, id });
+  } = useGetCommentListQuery({ page, id, q: query, type });
   const {
     data: replies,
     isFetching: isFetchingReplies,
     refetch: refetchReplies,
   } = useGetReplyListQuery(
-    { pageReply, selectedCommentId },
+    { pageReply, selectedCommentId, q: queryReply, type: typeReply },
     {
       skip: !selectedCommentId,
     }
@@ -166,6 +171,15 @@ const Comment = () => {
     setReplyModalVisible(true);
   };
 
+  const onSearch = (value, _e) => {
+    setQuery(value);
+    setPage(1);
+  };
+  const onSearchReply = (value, _e) => {
+    setQueryReply(value);
+    setPageReply(1);
+  };
+
   const columns = [
     {
       title: "Message Id",
@@ -191,6 +205,24 @@ const Comment = () => {
           {text}
         </div>
       ),
+    },
+    {
+      title: "User_id",
+      dataIndex: "user_id",
+      key: "user_id",
+      width: 80,
+    },
+    {
+      title: "Nickname",
+      dataIndex: "nickname",
+      key: "nickname",
+      width: 80,
+    },
+    {
+      title: "Create_time",
+      dataIndex: "create_time",
+      key: "create_time",
+      width: 80,
     },
     {
       title: "Unapprove Reply",
@@ -285,6 +317,12 @@ const Comment = () => {
     selectedRowKeys: selectedReplyRowKeys,
     onChange: (selectedKeys) => setSelectedReplyRowKeys(selectedKeys),
   };
+  const handleTypeChange = (value) => {
+    setType(value);
+  };
+  const handleTypeReplyChange = (value) => {
+    setTypeReply(value);
+  };
 
   return (
     <ConfigProvider
@@ -297,29 +335,57 @@ const Comment = () => {
     >
       <div style={{ padding: 20 }} className="container mx-auto">
         <Navbar status={true} />
-
-        {/* Bulk Actions for Comments */}
-        {selectedRowKeys.length > 0 && (
-          <div style={{ marginBottom: 16 }}>
-            <Button
-              type="primary"
-              onClick={() => {
-                setEditTarget("comments");
-                setEditModalVisible(true);
-              }}
-              style={{ marginRight: 8 }}
-            >
-              Edit Selected
-            </Button>
-            <Button
-              danger
-              onClick={() => confirmDelete(selectedRowKeys)}
-              loading={isDeleting}
-            >
-              Delete Selected
-            </Button>
+        <div
+          style={{
+            marginBottom: 20,
+            marginTop: 20,
+          }}
+          className="max-md:flex-col max-md:flex-wrap max-md:items-start flex justify-between items-center "
+        >
+          <div>
+            {/* Bulk Actions for Comments */}
+            {selectedRowKeys.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <Button
+                  type="primary"
+                  onClick={() => {
+                    setEditTarget("comments");
+                    setEditModalVisible(true);
+                  }}
+                  style={{ marginRight: 8 }}
+                >
+                  Edit Selected
+                </Button>
+                <Button
+                  danger
+                  onClick={() => confirmDelete(selectedRowKeys)}
+                  loading={isDeleting}
+                >
+                  Delete Selected
+                </Button>
+              </div>
+            )}
           </div>
-        )}
+
+          <div className="flex justify-center max-md:flex-col">
+            <Select
+              className="select-pub mb-3"
+              defaultValue="content"
+              value={type}
+              // size="large"
+              onChange={handleTypeChange}
+              style={{ width: 120, marginRight: 10 }}
+            >
+              <Option value="content">Content</Option>
+              <Option value="userid">UserId</Option>
+            </Select>
+            <Search
+              onSearch={onSearch}
+              placeholder="Search comments"
+              className="max-md:w-[280px] w-[300px] mb-3"
+            />
+          </div>
+        </div>
 
         <div style={{ overflowX: "auto" }}>
           <Table
@@ -374,21 +440,81 @@ const Comment = () => {
           forceRender
           width={800}
         >
+          <div
+            style={{
+              marginBottom: 20,
+              marginTop: 20,
+            }}
+            className="max-md:flex-col max-md:flex-wrap max-md:items-start flex justify-between items-center "
+          >
+            <div></div>
+            <div className=" flex items-center max-md:flex-col max-md:items-start">
+              <Select
+                className="select-pub mb-3"
+                defaultValue="content"
+                value={typeReply}
+                // size="large"
+                onChange={handleTypeReplyChange}
+                style={{ width: 120, marginRight: 10 }}
+              >
+                <Option value="content">Content</Option>
+                <Option value="userid">UserId</Option>
+              </Select>
+              <Search
+                onSearch={onSearchReply}
+                placeholder="Search replies"
+                className="max-md:w-[280px] w-[300px] mb-3"
+              />
+            </div>
+          </div>
           <Spin spinning={isFetchingReplies}>
             <Table
               rowSelection={rowSelectionReplies}
               dataSource={replies?.data?.list || []}
               columns={[
                 {
-                  title: "Reply Id",
+                  title: "Reply_id",
                   dataIndex: "id",
                   key: "id",
-                  width: 200,
+                  width: 80,
                 },
                 {
                   title: "Reply",
                   dataIndex: "content",
                   key: "content",
+                  render: (text) => (
+                    <div
+                      className="description-column"
+                      style={{
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {text}
+                    </div>
+                  ),
+                },
+
+                {
+                  title: "User_id",
+                  dataIndex: "user_id",
+                  key: "user_id",
+                  width: 80,
+                },
+                {
+                  title: "Nickname",
+                  dataIndex: "nickname",
+                  key: "nickname",
+                  width: 80,
+                },
+                {
+                  title: "Create_time",
+                  dataIndex: "create_time",
+                  key: "create_time",
+                  width: 80,
                 },
                 {
                   title: "Status",
@@ -450,6 +576,7 @@ const Comment = () => {
                 },
               ]}
               rowKey="id"
+              scroll={{ x: 600 }}
               pagination={{
                 current: replies?.data?.page,
                 total: replies?.data?.total,

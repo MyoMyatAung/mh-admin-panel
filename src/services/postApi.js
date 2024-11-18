@@ -27,19 +27,32 @@ export const PostApi = createApi({
 
   endpoints: (builder) => ({
     getList: builder.query({
-      query: (data) => ({
-        url: `panel/post/list?page=${data?.page}&status=${data?.status}`,
-      }),
+      query: (data) => {
+        const { page, status, q, type } = data;
+        let url = `panel/post/list?page=${page}&status=${status}`;
+        if (q) {
+          url += `&q=${encodeURIComponent(q)}&type=${type}`; // Append query parameter if it exists
+        }
+        return { url };
+      },
     }),
     getCommentList: builder.query({
-      query: ({ page, id }) => ({
-        url: `panel/post/comment/list?post_id=${id}&page=${page}`,
-      }),
+      query: ({ page, id, q, type }) => {
+        let url = `panel/post/comment/list?post_id=${id}&page=${page}`;
+        if (q) {
+          url += `&q=${encodeURIComponent(q)}&type=${type}`; // Append query parameter if it exists
+        }
+        return { url };
+      },
     }),
     getReplyList: builder.query({
-      query: ({ pageReply, selectedCommentId }) => ({
-        url: `panel/post/reply/list?comment_id=${selectedCommentId}&page=${pageReply}`,
-      }),
+      query: ({ pageReply, q, selectedCommentId, type }) => {
+        let url = `panel/post/reply/list?comment_id=${selectedCommentId}&page=${pageReply}`;
+        if (q) {
+          url += `&q=${encodeURIComponent(q)}&type=${type}`; // Append query parameter if it exists
+        }
+        return { url };
+      },
     }),
     getCreators: builder.query({
       query: ({ page, pageSize }) => ({
@@ -64,10 +77,10 @@ export const PostApi = createApi({
       transformResponse: (response) => response,
     }),
     DeletePost: builder.mutation({
-      query: (id) => ({
+      query: (ids) => ({
         url: `panel/post/delete`,
         method: "POST",
-        body: { post_id: id },
+        body: { post_ids: ids },
       }),
       transformResponse: (response) => response,
     }),
