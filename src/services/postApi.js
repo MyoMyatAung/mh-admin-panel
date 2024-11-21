@@ -38,20 +38,36 @@ export const PostApi = createApi({
     }),
     getCommentList: builder.query({
       query: ({ page, id, q, type }) => {
-        let url = `panel/post/comment/list?post_id=${id}&page=${page}`;
-        if (q) {
-          url += `&q=${encodeURIComponent(q)}&type=${type}`; // Append query parameter if it exists
+        if (id) {
+          let url = `panel/post/comment/list?post_id=${id}&page=${page}`;
+          if (q) {
+            url += `&q=${encodeURIComponent(q)}&type=${type}`; // Append query parameter if it exists
+          }
+          return { url };
+        } else {
+          let url = `panel/post/comment/list?&page=${page}`;
+          if (q) {
+            url += `&q=${encodeURIComponent(q)}&type=${type}`; // Append query parameter if it exists
+          }
+          return { url };
         }
-        return { url };
       },
     }),
     getReplyList: builder.query({
       query: ({ pageReply, q, selectedCommentId, type }) => {
-        let url = `panel/post/reply/list?comment_id=${selectedCommentId}&page=${pageReply}`;
-        if (q) {
-          url += `&q=${encodeURIComponent(q)}&type=${type}`; // Append query parameter if it exists
+        if (selectedCommentId) {
+          let url = `panel/post/reply/list?comment_id=${selectedCommentId}&page=${pageReply}`;
+          if (q) {
+            url += `&q=${encodeURIComponent(q)}&type=${type}`; // Append query parameter if it exists
+          }
+          return { url };
+        } else {
+          let url = `panel/post/reply/list?page=${pageReply}`;
+          if (q) {
+            url += `&q=${encodeURIComponent(q)}&type=${type}`; // Append query parameter if it exists
+          }
+          return { url };
         }
-        return { url };
       },
     }),
     getCreators: builder.query({

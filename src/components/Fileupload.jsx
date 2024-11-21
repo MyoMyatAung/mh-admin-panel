@@ -75,6 +75,7 @@ const Fileupload = ({
   const [status, setStatus] = useState("published"); // Track if we're uploading images or videos
   const [user_id, setUserId] = useState(""); // Track if we're uploading images or videos
   const [is_recommend, setIs_recommend] = useState(0); // Track if we're uploading images or videos
+  const [is_top, setIs_top] = useState(0); // Track if we're uploading images or videos
   const [createPost] = useCreatePostMutation();
   const { data, isLoading: isUsersLoading } = useGetCreatorsQuery({
     page: 1,
@@ -89,6 +90,7 @@ const Fileupload = ({
       setStatus(post.status || "published");
       setUserId(post?.user_id || "");
       setIs_recommend(post?.is_recommend || 0);
+      setIs_top(post?.is_top || 0);
 
       if (post.files) {
         // Parse and set files for editing
@@ -105,6 +107,7 @@ const Fileupload = ({
     } else {
       setStatus("published");
       setIs_recommend(0);
+      setIs_top(0);
       setUserId("");
       setDescription("");
       setFiles([]);
@@ -194,6 +197,14 @@ const Fileupload = ({
       setIs_recommend(1);
     } else {
       setIs_recommend(0);
+    }
+  };
+
+  const onChangeTop = (e) => {
+    if (e.target.checked) {
+      setIs_top(1);
+    } else {
+      setIs_top(0);
     }
   };
 
@@ -402,6 +413,7 @@ const Fileupload = ({
           }
 
           const postPayload = {
+            is_top,
             is_recommend,
             user_id: +user_id,
             description,
@@ -413,6 +425,7 @@ const Fileupload = ({
 
           await createPost(postPayload).unwrap();
           setIs_recommend(0);
+          setIs_top(0);
           setDescription("");
           setFiles([]);
           setThumbnail(null);
@@ -462,7 +475,7 @@ const Fileupload = ({
             setFiles([]);
             setThumbnail(null);
           }}
-          style={{ marginBottom: 10 }}
+          style={{ marginBottom: 10, marginRight: 10 }}
         >
           <Option value="image">Images</Option>
           <Option value="video">Videos</Option>
@@ -472,7 +485,7 @@ const Fileupload = ({
           onChange={(value) => {
             setStatus(value);
           }}
-          style={{ marginBottom: 10, marginLeft: 10 }}
+          style={{ marginBottom: 10, marginRight: 10 }}
         >
           <Option value="published">Published</Option>
           <Option value="review">Review</Option>
@@ -483,7 +496,7 @@ const Fileupload = ({
           value={user_id} // Bind selected user_id here
           onChange={(value) => setUserId(value)} // Update user_id on selection
           placeholder="Select User"
-          style={{ marginBottom: 10, marginLeft: 10, width: 120 }}
+          style={{ marginBottom: 10, marginRight: 10, width: 120 }}
           loading={isUsersLoading} // Show loading state when fetching users
         >
           {users?.map((user) => (
@@ -495,9 +508,16 @@ const Fileupload = ({
         <Checkbox
           onChange={onChange}
           checked={is_recommend === 1 ? true : false}
-          style={{ marginBottom: 10, marginLeft: 10 }}
+          style={{ marginBottom: 10, marginRight: 10 }}
         >
           Recommend
+        </Checkbox>
+        <Checkbox
+          onChange={onChangeTop}
+          checked={is_top === 1 ? true : false}
+          style={{ marginBottom: 10, marginRight: 10 }}
+        >
+          Top Pick
         </Checkbox>
 
         <div

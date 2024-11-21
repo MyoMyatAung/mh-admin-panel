@@ -293,19 +293,21 @@ const Home = () => {
               <Option value="review">Review</Option>
               <Option value="declined">Declined</Option>
             </Select>
-
-            {selectedRowKeys.length > 0 && (
-              <div className="mb-3">
-                <Button
-                  danger
-                  onClick={() => confirmDelete(selectedRowKeys)}
-                  loading={isDeleting}
-                >
-                  Delete Selected
-                </Button>
-              </div>
-            )}
+            <div className="max-lg:hidden block">
+              {selectedRowKeys.length > 0 && (
+                <div className="mb-3">
+                  <Button
+                    danger
+                    onClick={() => confirmDelete(selectedRowKeys)}
+                    loading={isDeleting}
+                  >
+                    Delete Selected
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
+
           <div className=" flex items-center max-md:flex-col max-md:items-start">
             <Select
               className="select-pub mb-3"
@@ -325,6 +327,19 @@ const Home = () => {
               className="max-md:w-[280px] w-[300px] mb-3"
             />
           </div>
+        </div>
+        <div className="max-lg:block hidden">
+          {selectedRowKeys.length > 0 && (
+            <div className="mb-3">
+              <Button
+                danger
+                onClick={() => confirmDelete(selectedRowKeys)}
+                loading={isDeleting}
+              >
+                Delete Selected
+              </Button>
+            </div>
+          )}
         </div>
 
         <div style={{ overflowX: "auto" }}>

@@ -246,7 +246,7 @@ body {
   background: transparent;
   color: white;
   border: 1px solid rgba(255, 255, 255, 0.48);
-  height: 44px;
+  /* height: 22px; */
   color: #fff;
   text-align: center;
   font-feature-settings: "liga" off, "clig" off;
@@ -256,11 +256,12 @@ body {
   font-weight: 500;
   line-height: 20px; /* 125% */
   letter-spacing: 0.3px;
+  transition: 0.5s;
 }
 .logout-btn:hover {
   border-radius: var(--Height-And-Sizes-12, 12px);
   border: 1px solid rgba(255, 255, 255, 0.48);
-  background: #ff2600 !important;
+  background: #ff8517 !important;
   color: white !important;
 }
 
@@ -364,4 +365,54 @@ body {
 /* Custom spinner color */
 .ant-spin-dot-item {
   background-color: white !important; /* Replace with your desired color */
+}
+
+/* Navbar container styling */
+.navbar-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Menu styling */
+.menu {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+.ant-menu-item a {
+  color: white;
+  font-size: 16px;
+  transition: color 0.3s ease-in-out;
+}
+
+.ant-menu-item:hover a,
+.ant-menu-item-selected a {
+  color: #ff8415 !important; /* Active and hover color */
+  font-weight: bold;
+}
+/* Remove bottom border for the active menu item */
+.ant-menu-horizontal .ant-menu-item-selected {
+  border-bottom: none !important;
+}
+
+.ant-menu-horizontal > .ant-menu-item::after {
+  display: none !important;
+}
+/* Logout button styling */
+
+/* Drawer styling */
+.mobile-drawer .ant-drawer-content {
+  background-color: #1e1e1e; /* Dark background for drawer */
+}
+
+.mobile-drawer a {
+  text-decoration: none;
+  font-size: 18px;
+}
+
+.mobile-drawer a:hover {
+  color: #ff8415;
+  transition: color 0.3s ease-in-out;
 }
