@@ -24,6 +24,7 @@ const { Option } = Select;
 const { Search } = Input;
 const CommentList = () => {
   const [type, setType] = useState("content");
+  const [status, setStatus] = useState("all");
 
   const [page, setPage] = useState(1);
   const [query, setQuery] = useState(""); // State for selected rows for comments
@@ -42,7 +43,7 @@ const CommentList = () => {
     refetch,
     isFetching,
     isLoading,
-  } = useGetCommentListQuery({ page, q: query, type });
+  } = useGetCommentListQuery({ page, q: query, type, status: status });
 
   const [updateComment, { isLoading: isUpdating }] = useUpdateCommentMutation();
 
@@ -147,6 +148,12 @@ const CommentList = () => {
 
   const onSearch = (value, _e) => {
     setQuery(value);
+    setPage(1);
+  };
+
+  const handleStatusChange = (value) => {
+    refetch();
+    setStatus(value);
     setPage(1);
   };
 
@@ -283,35 +290,21 @@ const CommentList = () => {
         <Navbar status={true} />
         <div
           style={{
-            marginBottom: 20,
             marginTop: 20,
           }}
           className="max-md:flex-col max-md:flex-wrap max-md:items-start flex justify-between items-center "
         >
-          <div>
-            {/* Bulk Actions for Comments */}
-            {selectedRowKeys.length > 0 && (
-              <div style={{ marginBottom: 16 }}>
-                <Button
-                  type="primary"
-                  onClick={() => {
-                    setEditTarget("comments");
-                    setEditModalVisible(true);
-                  }}
-                  style={{ marginRight: 8 }}
-                >
-                  Edit Selected
-                </Button>
-                <Button
-                  danger
-                  onClick={() => confirmDelete(selectedRowKeys)}
-                  loading={isDeleting}
-                >
-                  Delete Selected
-                </Button>
-              </div>
-            )}
-          </div>
+          <Select
+            className="select-pub mb-3"
+            defaultValue="all"
+            value={status}
+            onChange={handleStatusChange}
+            style={{ width: 120, marginRight: 10 }}
+          >
+            <Option value="all">All</Option>
+            <Option value="0">UnReviewed</Option>
+            <Option value="1">Reviewed</Option>
+          </Select>
 
           <div className="flex justify-center max-md:flex-col">
             <Select
@@ -331,6 +324,30 @@ const CommentList = () => {
               className="max-md:w-[280px] w-[300px] mb-3"
             />
           </div>
+        </div>
+        <div>
+          {/* Bulk Actions for Comments */}
+          {selectedRowKeys.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <Button
+                type="primary"
+                onClick={() => {
+                  setEditTarget("comments");
+                  setEditModalVisible(true);
+                }}
+                style={{ marginRight: 8 }}
+              >
+                Edit Selected
+              </Button>
+              <Button
+                danger
+                onClick={() => confirmDelete(selectedRowKeys)}
+                loading={isDeleting}
+              >
+                Delete Selected
+              </Button>
+            </div>
+          )}
         </div>
 
         <div style={{ overflowX: "auto" }}>

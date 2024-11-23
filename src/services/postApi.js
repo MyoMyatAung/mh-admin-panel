@@ -28,16 +28,19 @@ export const PostApi = createApi({
   endpoints: (builder) => ({
     getList: builder.query({
       query: (data) => {
-        const { page, status, q, type } = data;
+        const { page, status, q, type, filter } = data;
         let url = `panel/post/list?page=${page}&status=${status}`;
         if (q) {
           url += `&q=${encodeURIComponent(q)}&type=${type}`; // Append query parameter if it exists
+        }
+        if (filter !== "all") {
+          url += `&filter=${filter}`;
         }
         return { url };
       },
     }),
     getCommentList: builder.query({
-      query: ({ page, id, q, type }) => {
+      query: ({ page, id, q, type, status }) => {
         if (id) {
           let url = `panel/post/comment/list?post_id=${id}&page=${page}`;
           if (q) {
@@ -49,12 +52,15 @@ export const PostApi = createApi({
           if (q) {
             url += `&q=${encodeURIComponent(q)}&type=${type}`; // Append query parameter if it exists
           }
+          if (status !== "all") {
+            url += `&status=${status}`; // Append query parameter if it exists
+          }
           return { url };
         }
       },
     }),
     getReplyList: builder.query({
-      query: ({ pageReply, q, selectedCommentId, type }) => {
+      query: ({ pageReply, q, selectedCommentId, type, status }) => {
         if (selectedCommentId) {
           let url = `panel/post/reply/list?comment_id=${selectedCommentId}&page=${pageReply}`;
           if (q) {
@@ -65,6 +71,9 @@ export const PostApi = createApi({
           let url = `panel/post/reply/list?page=${pageReply}`;
           if (q) {
             url += `&q=${encodeURIComponent(q)}&type=${type}`; // Append query parameter if it exists
+          }
+          if (status !== "all") {
+            url += `&status=${status}`; // Append query parameter if it exists
           }
           return { url };
         }

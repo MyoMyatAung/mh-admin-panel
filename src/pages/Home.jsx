@@ -23,6 +23,7 @@ const Home = () => {
   const [type, setType] = useState("content");
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState("published");
+  const [filter, setFilter] = useState("all");
   const [query, setQuery] = useState(""); // State for selected rows for comments
 
   const { data, isLoading, isFetching, refetch } = useGetListQuery({
@@ -30,6 +31,7 @@ const Home = () => {
     status,
     q: query, // Pass the query state here
     type,
+    filter,
   });
   const [deletePost, { isLoading: isDeleting }] = useDeletePostMutation();
   const [isFileUploadVisible, setFileUploadVisible] = useState(false);
@@ -69,6 +71,11 @@ const Home = () => {
   const handleStatusChange = (value) => {
     refetch();
     setStatus(value);
+    setPage(1);
+  };
+  const handleFilterChange = (value) => {
+    refetch();
+    setFilter(value);
     setPage(1);
   };
 
@@ -251,7 +258,6 @@ const Home = () => {
 
         <div
           style={{
-            marginBottom: 20,
             marginTop: 20,
           }}
           className="max-md:flex-col max-md:flex-wrap max-md:items-start flex justify-between items-center"
@@ -293,7 +299,18 @@ const Home = () => {
               <Option value="review">Review</Option>
               <Option value="declined">Declined</Option>
             </Select>
-            <div className="max-lg:hidden block">
+            <Select
+              className="select-pub mb-3"
+              defaultValue="all"
+              value={filter}
+              onChange={handleFilterChange}
+              style={{ width: 120, marginRight: 10 }}
+            >
+              <Option value="all">All</Option>
+              <Option value="top">Top</Option>
+              <Option value="recommend">Recommend</Option>
+            </Select>
+            {/* <div className="max-lg:hidden block">
               {selectedRowKeys.length > 0 && (
                 <div className="mb-3">
                   <Button
@@ -305,7 +322,7 @@ const Home = () => {
                   </Button>
                 </div>
               )}
-            </div>
+            </div> */}
           </div>
 
           <div className=" flex items-center max-md:flex-col max-md:items-start">
@@ -328,7 +345,7 @@ const Home = () => {
             />
           </div>
         </div>
-        <div className="max-lg:block hidden">
+        <div className="">
           {selectedRowKeys.length > 0 && (
             <div className="mb-3">
               <Button

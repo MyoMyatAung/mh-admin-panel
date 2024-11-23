@@ -24,6 +24,7 @@ const { Option } = Select;
 const { Search } = Input;
 const ReplyList = () => {
   const [typeReply, setTypeReply] = useState("content");
+  const [status, setStatus] = useState("all");
 
   const [queryReply, setQueryReply] = useState(""); // State for selected rows for comments
   const [pageReply, setPageReply] = useState(1);
@@ -42,7 +43,12 @@ const ReplyList = () => {
     data: replies,
     isFetching: isFetchingReplies,
     refetch: refetchReplies,
-  } = useGetReplyListQuery({ q: queryReply, type: typeReply, pageReply });
+  } = useGetReplyListQuery({
+    q: queryReply,
+    type: typeReply,
+    pageReply,
+    status,
+  });
   const [updateComment, { isLoading: isUpdating }] = useUpdateCommentMutation();
 
   const confirmDelete = (ids, isReply = 0) => {
@@ -160,6 +166,12 @@ const ReplyList = () => {
     setTypeReply(value);
   };
 
+  const handleStatusChange = (value) => {
+    refetchReplies();
+    setStatus(value);
+    setPageReply(1);
+  };
+
   return (
     <ConfigProvider
       theme={{
@@ -173,35 +185,19 @@ const ReplyList = () => {
         <Navbar status={true} />
 
         <div style={{ overflowX: "auto" }}>
-          <div
-            style={{
-              marginBottom: 20,
-            }}
-            className="max-md:flex-col max-md:flex-wrap max-md:items-start flex justify-between items-center "
-          >
-            <div className="mb-3">
-              {selectedReplyRowKeys.length > 0 && (
-                <>
-                  <Button
-                    type="primary"
-                    onClick={() => {
-                      setEditTarget("replies");
-                      setEditModalVisible(true);
-                    }}
-                    style={{ marginRight: 8 }}
-                  >
-                    Edit Selected
-                  </Button>
-                  <Button
-                    danger
-                    onClick={() => confirmDelete(selectedReplyRowKeys, 1)}
-                    loading={isDeleting}
-                  >
-                    Delete Selected
-                  </Button>
-                </>
-              )}
-            </div>
+          <div className="max-md:flex-col max-md:flex-wrap max-md:items-start flex justify-between items-center ">
+            <Select
+              className="select-pub mb-3"
+              defaultValue="all"
+              value={status}
+              onChange={handleStatusChange}
+              style={{ width: 120, marginRight: 10 }}
+            >
+              <Option value="all">All</Option>
+              <Option value="0">UnReviewed</Option>
+              <Option value="1">Reviewed</Option>
+            </Select>
+
             <div className="flex items-center max-md:flex-col max-md:items-start">
               <Select
                 className="select-pub mb-3"
@@ -221,6 +217,29 @@ const ReplyList = () => {
               />
             </div>
           </div>
+
+          {selectedReplyRowKeys.length > 0 && (
+            <div className="mb-3">
+              <Button
+                type="primary"
+                onClick={() => {
+                  setEditTarget("replies");
+                  setEditModalVisible(true);
+                }}
+                style={{ marginRight: 8 }}
+              >
+                Edit Selected
+              </Button>
+              <Button
+                danger
+                onClick={() => confirmDelete(selectedReplyRowKeys, 1)}
+                loading={isDeleting}
+              >
+                Delete Selected
+              </Button>
+            </div>
+          )}
+
           <Spin spinning={isFetchingReplies}>
             <Table
               rowSelection={rowSelectionReplies}

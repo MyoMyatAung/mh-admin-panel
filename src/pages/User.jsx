@@ -22,7 +22,9 @@ const User = () => {
   const [userCreate, setUserCreate] = useState(false);
 
   const [loading, setLoading] = useState(false);
-  const { data, isLoading, isFetching, refetch } = useGetCreatorsQuery({page});
+  const { data, isLoading, isFetching, refetch } = useGetCreatorsQuery({
+    page,
+  });
   const [actionUser, { isLoading: isDeleting }] = useActionCreatorMutation();
 
   const users = data?.data?.list || [];
@@ -114,7 +116,7 @@ const User = () => {
             display: "flex",
             alignItems: "center",
 
-            marginBottom: 20,
+            marginBottom: 10,
             marginTop: 20,
           }}
         >
