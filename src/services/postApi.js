@@ -1,7 +1,7 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 const customFetchBaseQuery = async (args, api, extraOptions) => {
   const result = await fetchBaseQuery({
-    baseUrl: "https://cc3e497d.qdhgtch.com:2345/api/v1",
+    baseUrl: import.meta.env.VITE_API_URL,
     prepareHeaders: (headers) => {
       // Get token from localStorage
       const token = localStorage.getItem("token");

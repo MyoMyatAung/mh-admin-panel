@@ -22,7 +22,7 @@ const Login = () => {
 
       try {
         const response = await axios.post(
-          "https://cc3e497d.qdhgtch.com:2345/api/v1/panel/login",
+          `${import.meta.env.VITE_API_URL}/panel/login`,
           {
             username,
             password,

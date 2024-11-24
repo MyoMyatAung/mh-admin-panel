@@ -147,11 +147,7 @@ const Home = () => {
       key: "create_time",
       width: 80,
     },
-    {
-      title: "Unapprove",
-      dataIndex: "unapprove_comment_count",
-      key: "unapprove_comment_count",
-    },
+
     {
       title: "Comments",
       key: "comments",
