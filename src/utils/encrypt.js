@@ -61,8 +61,11 @@ export class RSAEncryptor {
       throw new Error("Invalid key size for PKCS#1 encryption.");
     }
 
-    // Split plaintext into chunks
-    const chunks = this._splitIntoChunks(plaintext, maxLength);
+    // Convert plaintext to binary format (UTF-8 encoding)
+    const binaryData = forge.util.encodeUtf8(plaintext);
+
+    // Split binary data into chunks
+    const chunks = this._splitIntoChunks(binaryData, maxLength);
 
     // Encrypt each chunk and concatenate the binary encrypted data
     const encryptedChunks = chunks.map((chunk) =>
