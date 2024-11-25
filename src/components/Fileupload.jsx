@@ -7,7 +7,7 @@ import {
   useCreatePostMutation,
   useGetCreatorsQuery,
 } from "../services/postApi";
-import { message, Button, Select, Checkbox } from "antd";
+import { message, Button, Select, Checkbox, Modal } from "antd";
 import axios from "axios";
 import TextArea from "antd/es/input/TextArea";
 
@@ -15,7 +15,14 @@ const MAX_IMAGES = 9;
 
 const { Option } = Select;
 
-const FilePreview = ({ file, index, moveFile, onRemove, type }) => {
+const FilePreview = ({
+  file,
+  index,
+  moveFile,
+  onRemove,
+  type,
+  handleVideoClick,
+}) => {
   const [, ref] = useDrag({
     type: "FILE",
     item: { index },
@@ -38,7 +45,11 @@ const FilePreview = ({ file, index, moveFile, onRemove, type }) => {
       {type === "image" ? (
         <img src={previewUrl} alt="preview" className="preview-image" />
       ) : (
-        <video src={previewUrl} controls className="preview-video" />
+        <video
+          src={previewUrl}
+          className="preview-video"
+          onClick={() => handleVideoClick(previewUrl)}
+        />
       )}
       <button onClick={() => onRemove(file)} className="remove-btn">
         <svg
@@ -82,6 +93,18 @@ const Fileupload = ({
     pageSize: 30,
   });
   const users = data?.data?.list || [];
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentVideo, setCurrentVideo] = useState(null);
+
+  const handleVideoClick = (videoUrl) => {
+    setCurrentVideo(videoUrl);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setCurrentVideo(null);
+  };
 
   useEffect(() => {
     if (post) {
@@ -114,6 +137,7 @@ const Fileupload = ({
       setThumbnail(null);
     }
   }, [isVisible, post]);
+
   const generateThumbnail = (videoFile) => {
     return new Promise((resolve, reject) => {
       // Ensure the input is a File or Blob
@@ -261,8 +285,6 @@ const Fileupload = ({
       setIs_top(0);
     }
   };
-
-  console.log(files);
 
   const handleRemoveFile = (fileToRemove) => {
     if (fileType === "image") {
@@ -450,8 +472,6 @@ const Fileupload = ({
             ...(post && { post_id: post.id }),
           };
 
-          console.log(postPayload);
-
           await createPost(postPayload).unwrap();
           setIs_recommend(0);
           setIs_top(0);
@@ -484,9 +504,6 @@ const Fileupload = ({
       setUserId(users[0].id); // Set default user_id to the first user in the list
     }
   }, [users, user_id]);
-
-  console.log(thumbnail);
-  console.log(files);
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -599,6 +616,7 @@ const Fileupload = ({
                   moveFile={moveFile}
                   onRemove={handleRemoveFile}
                   type={fileType}
+                  handleVideoClick={handleVideoClick}
                 />
               ))}
             </div>
@@ -654,6 +672,22 @@ const Fileupload = ({
           </Button>
         </div>
       </div>
+      <Modal
+        visible={isModalOpen}
+        footer={null}
+        onCancel={closeModal}
+        title="Video Preview"
+        centered
+        width={400}
+      >
+        {currentVideo && (
+          <video
+            src={currentVideo}
+            controls
+            className="max-h-[450px] w-full mt-5"
+          />
+        )}
+      </Modal>
     </DndProvider>
   );
 };
