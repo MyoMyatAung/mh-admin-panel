@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { EyeInvisibleOutlined, EyeTwoTone } from "@ant-design/icons";
+
 import { Button, Input, ConfigProvider, theme, message } from "antd";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/logo.png";
+import { generateData } from "../services/postApi";
 
 const Login = () => {
   const [loading, setLoading] = useState(false);
@@ -23,10 +24,10 @@ const Login = () => {
       try {
         const response = await axios.post(
           `${import.meta.env.VITE_API_URL}/panel/login`,
-          {
+          generateData({
             username,
             password,
-          }
+          })
         );
 
         // Assuming response contains the token in response.data.token

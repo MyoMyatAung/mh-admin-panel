@@ -1,4 +1,28 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import {
+  convertToSecureUrl,
+  generateSignature,
+  RSAEncryptor,
+} from "../utils/encrypt";
+
+export const generateData = (data) => {
+  const newData = { ...data, timestamp: new Date().getTime() };
+
+  const jsonString = JSON.stringify(newData);
+
+  const keySize = 1024; // Key size in bits (e.g., 1024, 2048)
+  const encryptor = new RSAEncryptor(import.meta.env.VITE_PUBLIC_KEY, keySize);
+
+  const encryptedData = encryptor.encryptPKCS1(jsonString);
+
+  const signature = generateSignature(encryptedData);
+
+  return {
+    pack: encryptedData,
+    signature,
+  };
+};
+
 const customFetchBaseQuery = async (args, api, extraOptions) => {
   const result = await fetchBaseQuery({
     baseUrl: import.meta.env.VITE_API_URL,
@@ -21,6 +45,7 @@ const customFetchBaseQuery = async (args, api, extraOptions) => {
 
   return result;
 };
+
 export const PostApi = createApi({
   reducerPath: "PostApi",
   baseQuery: customFetchBaseQuery,
@@ -29,24 +54,24 @@ export const PostApi = createApi({
     getList: builder.query({
       query: (data) => {
         const { page, status, q, type, filter } = data;
-        let url = `panel/post/list?page=${page}&status=${status}`;
+        let url = `panel/post/list?page=${page}&status=${status}&ignore_safe_check=true`;
         if (q) {
           url += `&q=${encodeURIComponent(q)}&type=${type}`; // Append query parameter if it exists
         }
         if (filter !== "all") {
           url += `&filter=${filter}`;
         }
-        return { url };
+        return convertToSecureUrl(url);
       },
     }),
     getCommentList: builder.query({
       query: ({ page, id, q, type, status }) => {
         if (id) {
-          let url = `panel/post/comment/list?post_id=${id}&page=${page}`;
+          let url = `panel/post/comment/list?post_id=${id}&page=${page}&ignore_safe_check=true`;
           if (q) {
             url += `&q=${encodeURIComponent(q)}&type=${type}`; // Append query parameter if it exists
           }
-          return { url };
+          return convertToSecureUrl(url);
         } else {
           let url = `panel/post/comment/list?&page=${page}`;
           if (q) {
@@ -55,18 +80,18 @@ export const PostApi = createApi({
           if (status !== "all") {
             url += `&status=${status}`; // Append query parameter if it exists
           }
-          return { url };
+          return convertToSecureUrl(url);
         }
       },
     }),
     getReplyList: builder.query({
       query: ({ pageReply, q, selectedCommentId, type, status }) => {
         if (selectedCommentId) {
-          let url = `panel/post/reply/list?comment_id=${selectedCommentId}&page=${pageReply}`;
+          let url = `panel/post/reply/list?comment_id=${selectedCommentId}&page=${pageReply}&ignore_safe_check=true`;
           if (q) {
             url += `&q=${encodeURIComponent(q)}&type=${type}`; // Append query parameter if it exists
           }
-          return { url };
+          return convertToSecureUrl(url);
         } else {
           let url = `panel/post/reply/list?page=${pageReply}`;
           if (q) {
@@ -75,20 +100,22 @@ export const PostApi = createApi({
           if (status !== "all") {
             url += `&status=${status}`; // Append query parameter if it exists
           }
-          return { url };
+          return convertToSecureUrl(url);
         }
       },
     }),
     getCreators: builder.query({
-      query: ({ page, pageSize }) => ({
-        url: `panel/post/creator/list?page=${page}&pageSize=${pageSize || 10}`,
-      }),
+      query: ({ page, pageSize }) => {
+        return convertToSecureUrl(
+          `panel/post/creator/list?page=${page}&pageSize=${pageSize || 10}`
+        );
+      },
     }),
     actionCreator: builder.mutation({
       query: (data) => ({
         url: `panel/post/creator/action`,
         method: "POST",
-        body: data,
+        body: generateData(data),
       }),
       transformResponse: (response) => response,
     }),
@@ -97,7 +124,7 @@ export const PostApi = createApi({
       query: (data) => ({
         url: `panel/post/save`,
         method: "POST",
-        body: data,
+        body: generateData(data),
       }),
       transformResponse: (response) => response,
     }),
@@ -105,7 +132,7 @@ export const PostApi = createApi({
       query: (ids) => ({
         url: `panel/post/delete`,
         method: "POST",
-        body: { post_ids: ids },
+        body: generateData({ post_ids: ids }),
       }),
       transformResponse: (response) => response,
     }),
@@ -113,7 +140,7 @@ export const PostApi = createApi({
       query: (data) => ({
         url: `panel/post/comment/delete`,
         method: "POST",
-        body: { ids: data?.ids, is_reply: data?.is_reply },
+        body: generateData({ ids: data?.ids, is_reply: data?.is_reply }),
       }),
       transformResponse: (response) => response,
     }),
@@ -121,11 +148,11 @@ export const PostApi = createApi({
       query: (data) => ({
         url: `panel/post/comment/status/update`,
         method: "POST",
-        body: {
+        body: generateData({
           ids: data?.ids,
           is_reply: data?.is_reply,
           status: data?.status,
-        },
+        }),
       }),
       transformResponse: (response) => response,
     }),
