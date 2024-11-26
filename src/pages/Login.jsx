@@ -4,13 +4,16 @@ import { Button, Input, ConfigProvider, theme, message } from "antd";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/logo.png";
-import { generateData } from "../services/postApi";
+import { generateData, PostApi } from "../services/postApi";
+
+import { useDispatch } from "react-redux";
 
 const Login = () => {
   const [loading, setLoading] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const handleSubmit = async () => {
     if (username && password) {
@@ -35,6 +38,8 @@ const Login = () => {
 
         // Store token in localStorage
         localStorage.setItem("token", access_token);
+
+        dispatch(PostApi.util.resetApiState());
 
         message.success("Login successful!");
         navigate("/"); // Redirect to home page

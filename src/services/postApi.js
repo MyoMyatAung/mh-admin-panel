@@ -51,6 +51,13 @@ export const PostApi = createApi({
   baseQuery: customFetchBaseQuery,
 
   endpoints: (builder) => ({
+    getUserInfo: builder.query({
+      query: () => {
+        let url = `panel/post/creator/info`;
+        return convertToSecureUrl(url);
+      },
+    }),
+
     getList: builder.query({
       query: (data) => {
         const { page, status, q, type, filter } = data;
@@ -169,4 +176,5 @@ export const {
   useDeleteCommentMutation,
   useUpdateCommentMutation,
   useGetReplyListQuery,
+  useGetUserInfoQuery,
 } = PostApi;
