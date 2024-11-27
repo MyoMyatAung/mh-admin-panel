@@ -10,6 +10,7 @@ import {
   theme,
   Tag,
   Spin,
+  Progress,
 } from "antd";
 import {
   useGetListQuery,
@@ -44,6 +45,7 @@ const Home = () => {
   const [modalKey, setModalKey] = useState(0); // Key to force re-render
   const [loading, setLoading] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]); // State for selected rows for comments
+  const [uploadPercentage, setUploadPercentage] = useState(0);
 
   const userData = user?.data;
 
@@ -462,13 +464,37 @@ const Home = () => {
               maskClosable={!loading}
               footer={null}
             >
-              <Spin spinning={loading}>
+              <div
+                style={{
+                  position: "relative", // Make sure the parent div is positioned to allow absolute positioning of the progress bar
+                  pointerEvents: loading ? "none" : "auto",
+                }}
+              >
+                {/* Centered Progress Bar */}
+                {((uploadPercentage > 0 && uploadPercentage < 100) ||
+                  loading) && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "50%",
+                      left: "50%",
+                      transform: "translate(-50%, -50%)",
+                      width: "100%", // Optional: if you want the progress bar to fill the width of the parent container
+                      zIndex: 9999, // Ensure the progress bar stays on top
+                      opacity: 2,
+                    }}
+                  >
+                    <Progress percent={uploadPercentage} />
+                  </div>
+                )}
                 <div
                   style={{
+                    position: "relative", // Make sure the parent div is positioned to allow absolute positioning of the progress bar
                     pointerEvents: loading ? "none" : "auto",
-                    opacity: loading ? 0.5 : 1,
+                    opacity: loading ? 0.1 : 1,
                   }}
                 >
+                  {/* Fileupload Component */}
                   <Fileupload
                     setEditingPost={setEditingPost}
                     onClose={() => {
@@ -482,9 +508,11 @@ const Home = () => {
                     refetch={refetch}
                     post={editingPost} // Pass post data if editing
                     isVisible={isFileUploadVisible} // New prop to trigger reset on modal open
+                    setUploadPercentage={setUploadPercentage}
+                    uploadPercentage={uploadPercentage}
                   />
                 </div>
-              </Spin>
+              </div>
             </Modal>
           </>
         ) : (

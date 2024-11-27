@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+
 import {
   useCreatePostMutation,
   useGetCreatorsQuery,
@@ -10,6 +10,7 @@ import {
 import { message, Button, Select, Checkbox, Modal } from "antd";
 import axios from "axios";
 import TextArea from "antd/es/input/TextArea";
+import AWS from "aws-sdk";
 
 const MAX_IMAGES = 9;
 
@@ -78,6 +79,8 @@ const Fileupload = ({
   setLoading,
   loading,
   isVisible,
+
+  setUploadPercentage,
 }) => {
   const [files, setFiles] = useState([]);
   const [thumbnail, setThumbnail] = useState(null);
@@ -353,6 +356,8 @@ const Fileupload = ({
 
   const handleSubmit = async () => {
     setLoading(true);
+    setUploadPercentage(0);
+
     if (description && files.length > 0) {
       if (fileType === "image" || (fileType === "video" && thumbnail)) {
         try {
@@ -368,72 +373,94 @@ const Fileupload = ({
             publicUrl,
             directory,
           } = response.data;
-          const s3Client = new S3Client({
+
+          // Configure AWS SDK with credentials
+          AWS.config.update({
             region,
-            credentials: { accessKeyId, secretAccessKey, sessionToken },
+            credentials: {
+              accessKeyId,
+              secretAccessKey,
+              sessionToken,
+            },
           });
 
-          const uploadedFileUrls = []; // Array to store uploaded file URLs with the new structure
+          const s3 = new AWS.S3(); // Create S3 instance
 
+          const uploadedFileUrls = [];
+          let totalFiles = files.length;
+          let uploadedFiles = 0;
+          let totalProgress = 0;
+
+          // Iterate over files and upload
           for (const file of files) {
             if (file?.resourceURL) {
               uploadedFileUrls.push(file);
-            } else {
-              try {
-                // Determine key and content for each file
-                const isImage = fileType === "image";
-                const key = isImage
-                  ? `image_${Date.now()}_${Math.random()
-                      .toString(36)
-                      .substr(2, 9)}.${file.suffix}`
-                  : `video_${Date.now()}_${Math.random()
-                      .toString(36)
-                      .substr(2, 9)}.${file.suffix}`;
-                const fileContent = file.image || file.video;
-                const contentType = isImage
-                  ? file.image?.type
-                  : file.video?.type;
-                const uploadParams = {
-                  Bucket: bucket,
-                  Key: `${directory}/${key}`,
-                  Body: fileContent,
-                  ContentType: contentType,
-                  ContentDisposition: "inline",
-                };
+              uploadedFiles++;
+              totalProgress = Math.round((uploadedFiles / totalFiles) * 100);
+              setUploadPercentage(totalProgress);
 
-                // Upload each file individually
-                await s3Client.send(new PutObjectCommand(uploadParams));
-
-                // Get file metadata (example placeholders for demonstration)
-                const metadata = {
-                  resourceURL: `${publicUrl}${directory}/${key}`,
-                  size: file?.size.toString(),
-                  height: file?.height || "", // Replace with actual height if available
-                  width: file?.width || "", // Replace with actual width if available
-                  suffix: file?.suffix,
-                  type: isImage ? "image" : "video",
-                };
-
-                // Add metadata to the array
-                uploadedFileUrls.push(metadata);
-              } catch (error) {
-                message.error(
-                  `Failed to upload ${
-                    fileType === "image" ? "image" : "video"
-                  }. Please try again.`
-                );
-                break; // Optionally, break the loop if an error occurs
-              }
+              continue; // Skip upload for already uploaded files
             }
+
+            const isImage = fileType === "image";
+            const key = isImage
+              ? `image_${Date.now()}_${Math.random()
+                  .toString(36)
+                  .substr(2, 9)}.${file.suffix}`
+              : `video_${Date.now()}_${Math.random()
+                  .toString(36)
+                  .substr(2, 9)}.${file.suffix}`;
+            const fileContent = file.image || file.video;
+            const contentType = isImage ? file.image?.type : file.video?.type;
+
+            const uploadParams = {
+              Bucket: bucket,
+              Key: `${directory}/${key}`,
+              Body: fileContent,
+              ContentType: contentType,
+              ContentDisposition: "inline",
+            };
+
+            // Use S3.upload() to upload file with progress tracking
+            const upload = s3.upload(uploadParams);
+
+            // Track upload progress
+            upload.on("httpUploadProgress", (progressEvent) => {
+              const progress = Math.round(
+                (progressEvent.loaded / progressEvent.total) * 100
+              );
+              totalProgress = Math.round(
+                ((uploadedFiles + progress / 100) / totalFiles) * 100
+              );
+
+              setUploadPercentage(totalProgress); // Update global progress
+            });
+
+            // Wait for upload to finish
+            await upload.promise();
+
+            const metadata = {
+              resourceURL: `${publicUrl}${directory}/${key}`,
+              size: file?.size.toString(),
+              height: file?.height || "",
+              width: file?.width || "",
+              suffix: file?.suffix,
+              type: isImage ? "image" : "video",
+            };
+
+            uploadedFileUrls.push(metadata);
+            uploadedFiles++;
+            totalProgress = Math.round((uploadedFiles / totalFiles) * 100);
+
+            setUploadPercentage(totalProgress); // Update global progress
           }
 
-          // Add thumbnail metadata if fileType is videos
+          // Handle thumbnail upload (if applicable)
           if (fileType === "video" && thumbnail) {
             if (typeof thumbnail !== "string") {
               const thumbnailKey = `thumbnail_${Date.now()}_${Math.random()
                 .toString(36)
                 .substr(2, 9)}.${getFileExtension(thumbnail.name)}`;
-
               const thumbnailParams = {
                 Bucket: bucket,
                 Key: `${directory}/${thumbnailKey}`,
@@ -441,7 +468,20 @@ const Fileupload = ({
                 ContentType: thumbnail?.type,
                 ContentDisposition: "inline",
               };
-              await s3Client.send(new PutObjectCommand(thumbnailParams));
+
+              const thumbnailUpload = s3.upload(thumbnailParams);
+
+              thumbnailUpload.on("httpUploadProgress", (progressEvent) => {
+                const progress = Math.round(
+                  (progressEvent.loaded / progressEvent.total) * 100
+                );
+                totalProgress = Math.round(
+                  ((uploadedFiles + progress / 100) / totalFiles) * 100
+                );
+                setUploadPercentage(totalProgress);
+              });
+
+              await thumbnailUpload.promise();
               const thumbnailUrl = `${publicUrl}${directory}/${thumbnailKey}`;
 
               if (
@@ -457,7 +497,6 @@ const Fileupload = ({
               ) {
                 uploadedFileUrls[0].thumbnail = thumbnail;
               }
-              // uploadedFileUrls.push(thumbnail);
             }
           }
 
@@ -499,6 +538,7 @@ const Fileupload = ({
       setLoading(false);
     }
   };
+
   useEffect(() => {
     if (!user_id && users?.length > 0) {
       setUserId(users[0].id); // Set default user_id to the first user in the list
@@ -516,7 +556,6 @@ const Fileupload = ({
           value={description}
           rows={4}
         />
-
         <Select
           value={fileType}
           onChange={(value) => {
@@ -540,7 +579,6 @@ const Fileupload = ({
           <Option value="review">Review</Option>
           <Option value="declined">Declined</Option>
         </Select>
-
         <Select
           value={user_id} // Bind selected user_id here
           onChange={(value) => setUserId(value)} // Update user_id on selection
