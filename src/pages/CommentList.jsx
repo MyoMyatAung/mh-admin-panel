@@ -297,6 +297,10 @@ const CommentList = () => {
     setType(value);
   };
 
+  if (isUserLoading) {
+    return <div></div>;
+  }
+
   return (
     <ConfigProvider
       theme={{

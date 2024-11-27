@@ -63,7 +63,7 @@ const Comment = () => {
     }
   );
   const [updateComment, { isLoading: isUpdating }] = useUpdateCommentMutation();
-  const { data: user } = useGetUserInfoQuery();
+  const { data: user, isLoading: isUserLoading } = useGetUserInfoQuery();
 
   const userData = user?.data;
   const permission = userData?.permission
@@ -343,6 +343,10 @@ const Comment = () => {
   const handleTypeReplyChange = (value) => {
     setTypeReply(value);
   };
+
+  if (isUserLoading) {
+    return <div></div>;
+  }
 
   return (
     <ConfigProvider

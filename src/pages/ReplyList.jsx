@@ -51,7 +51,7 @@ const ReplyList = () => {
     status,
   });
   const [updateComment, { isLoading: isUpdating }] = useUpdateCommentMutation();
-  const { data: user } = useGetUserInfoQuery();
+  const { data: user, isLoading: isUserLoading } = useGetUserInfoQuery();
 
   const userData = user?.data;
 
@@ -180,6 +180,10 @@ const ReplyList = () => {
     setStatus(value);
     setPageReply(1);
   };
+
+  if (isUserLoading) {
+    return <div></div>;
+  }
 
   return (
     <ConfigProvider

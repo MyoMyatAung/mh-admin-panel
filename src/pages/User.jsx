@@ -107,6 +107,10 @@ const User = () => {
         ]),
   ];
 
+  if (isUserLoading) {
+    return <div></div>;
+  }
+
   return (
     <ConfigProvider
       theme={{

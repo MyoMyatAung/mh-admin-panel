@@ -10,7 +10,9 @@ import {
 import { message, Button, Select, Checkbox, Modal } from "antd";
 import axios from "axios";
 import TextArea from "antd/es/input/TextArea";
-import AWS from "aws-sdk";
+
+import { S3Client } from "@aws-sdk/client-s3";
+import { Upload } from "@aws-sdk/lib-storage";
 
 const MAX_IMAGES = 9;
 
@@ -374,8 +376,8 @@ const Fileupload = ({
             directory,
           } = response.data;
 
-          // Configure AWS SDK with credentials
-          AWS.config.update({
+          // Create an S3 client
+          const s3 = new S3Client({
             region,
             credentials: {
               accessKeyId,
@@ -383,8 +385,6 @@ const Fileupload = ({
               sessionToken,
             },
           });
-
-          const s3 = new AWS.S3(); // Create S3 instance
 
           const uploadedFileUrls = [];
           let totalFiles = files.length;
@@ -398,7 +398,6 @@ const Fileupload = ({
               uploadedFiles++;
               totalProgress = Math.round((uploadedFiles / totalFiles) * 100);
               setUploadPercentage(totalProgress);
-
               continue; // Skip upload for already uploaded files
             }
 
@@ -421,8 +420,12 @@ const Fileupload = ({
               ContentDisposition: "inline",
             };
 
-            // Use S3.upload() to upload file with progress tracking
-            const upload = s3.upload(uploadParams);
+            // Use @aws-sdk/lib-storage for large file uploads with progress
+            const upload = new Upload({
+              client: s3,
+              leavePartsOnError: false,
+              params: uploadParams,
+            });
 
             // Track upload progress
             upload.on("httpUploadProgress", (progressEvent) => {
@@ -432,12 +435,11 @@ const Fileupload = ({
               totalProgress = Math.round(
                 ((uploadedFiles + progress / 100) / totalFiles) * 100
               );
-
               setUploadPercentage(totalProgress); // Update global progress
             });
 
             // Wait for upload to finish
-            await upload.promise();
+            await upload.done();
 
             const metadata = {
               resourceURL: `${publicUrl}${directory}/${key}`,
@@ -451,7 +453,6 @@ const Fileupload = ({
             uploadedFileUrls.push(metadata);
             uploadedFiles++;
             totalProgress = Math.round((uploadedFiles / totalFiles) * 100);
-
             setUploadPercentage(totalProgress); // Update global progress
           }
 
@@ -469,7 +470,11 @@ const Fileupload = ({
                 ContentDisposition: "inline",
               };
 
-              const thumbnailUpload = s3.upload(thumbnailParams);
+              const thumbnailUpload = new Upload({
+                client: s3,
+                leavePartsOnError: false,
+                params: thumbnailParams,
+              });
 
               thumbnailUpload.on("httpUploadProgress", (progressEvent) => {
                 const progress = Math.round(
@@ -478,10 +483,10 @@ const Fileupload = ({
                 totalProgress = Math.round(
                   ((uploadedFiles + progress / 100) / totalFiles) * 100
                 );
-                setUploadPercentage(totalProgress);
+                setUploadPercentage(totalProgress); // Update global progress
               });
 
-              await thumbnailUpload.promise();
+              await thumbnailUpload.done();
               const thumbnailUrl = `${publicUrl}${directory}/${thumbnailKey}`;
 
               if (
@@ -500,6 +505,7 @@ const Fileupload = ({
             }
           }
 
+          // Handle final post submission
           const postPayload = {
             is_top,
             is_recommend,
@@ -526,6 +532,7 @@ const Fileupload = ({
           );
           setLoading(false);
         } catch (error) {
+          console.error("Upload failed:", error);
           message.error("Failed to submit post. Please try again.");
           setLoading(false);
         }

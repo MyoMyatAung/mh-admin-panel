@@ -326,6 +326,9 @@ const Home = () => {
     setPage(1);
   };
 
+  if (isUserLoading) {
+    return <div></div>;
+  }
   return (
     <ConfigProvider
       theme={{
@@ -470,7 +473,6 @@ const Home = () => {
                   pointerEvents: loading ? "none" : "auto",
                 }}
               >
-                {/* Centered Progress Bar */}
                 {((uploadPercentage > 0 && uploadPercentage < 100) ||
                   loading) && (
                   <div
@@ -494,7 +496,6 @@ const Home = () => {
                     opacity: loading ? 0.1 : 1,
                   }}
                 >
-                  {/* Fileupload Component */}
                   <Fileupload
                     setEditingPost={setEditingPost}
                     onClose={() => {
