@@ -28,6 +28,7 @@ const User = () => {
   });
   const [actionUser, { isLoading: isDeleting }] = useActionCreatorMutation();
   const { data: user, isLoading: isUserLoading } = useGetUserInfoQuery();
+  const [editUser, setEditUser] = useState(null);
 
   const userData = user?.data;
 
@@ -52,6 +53,11 @@ const User = () => {
     } catch (error) {
       message.error("Failed to delete this user");
     }
+  };
+
+  const handleEdit = (record) => {
+    setUserCreate(true);
+    setEditUser(record);
   };
 
   const columns = [
@@ -82,6 +88,30 @@ const User = () => {
             width: 100,
             render: (text, record) => (
               <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  className="action_edit"
+                  onClick={() => handleEdit(record)}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 18 18"
+                    fill="none"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      clip-rule="evenodd"
+                      d="M13.0579 8.19176L14.2851 6.5569C14.8931 5.7469 15.1491 4.74889 15.0061 3.74589C14.8631 2.74289 14.3391 1.85689 13.5291 1.24889C11.8581 -0.00510502 9.47614 0.331895 8.22114 2.00489L1.46913 10.9999C-0.542874 13.6829 1.24713 16.8789 1.32413 17.0139C1.42813 17.1949 1.60313 17.3239 1.80713 17.3709C1.86513 17.3849 2.42513 17.5089 3.20613 17.5089C4.46913 17.5089 6.30713 17.1859 7.53314 15.5519L12.9017 8.39987C12.9329 8.37056 12.962 8.33806 12.9886 8.30266C13.0153 8.26716 13.0384 8.23006 13.0579 8.19176ZM2.47713 15.9619C3.25813 16.0569 5.22813 16.1239 6.33313 14.6509L11.3292 7.99506L7.66454 5.24362L2.66813 11.8999C1.54113 13.4039 2.16113 15.2449 2.47713 15.9619ZM8.56474 4.04449L12.2299 6.79517L13.0851 5.6559C13.8441 4.6459 13.6391 3.20689 12.6291 2.44789C11.6181 1.69089 10.1781 1.89589 9.42014 2.90489L8.56474 4.04449Z"
+                      fill="#8AC1FF"
+                    />
+                    <path
+                      d="M16.733 17.2471H10.356C9.94196 17.2471 9.60596 16.9111 9.60596 16.4971C9.60596 16.0831 9.94196 15.7471 10.356 15.7471H16.733C17.147 15.7471 17.483 16.0831 17.483 16.4971C17.483 16.9111 17.147 17.2471 16.733 17.2471Z"
+                      fill="#8AC1FF"
+                    />
+                  </svg>
+                </Button>
                 <Button
                   type="button"
                   className="action_del"
@@ -177,9 +207,12 @@ const User = () => {
         </div>
 
         <Modal
-          title={"Create User"}
+          title={editUser ? "Edit User" : "Create User"}
           visible={userCreate}
-          onCancel={() => setUserCreate(false)}
+          onCancel={() => {
+            setUserCreate(false);
+            setEditUser(null);
+          }}
           closable={!loading} // Disable close button while loading
           maskClosable={!loading}
           footer={null}
@@ -202,6 +235,7 @@ const User = () => {
                 setLoading={setLoading}
                 loading={loading}
                 isVisible={userCreate} // New prop to trigger reset on modal open
+                editUser={editUser}
               />
             </div>
           </Spin>

@@ -1,10 +1,10 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { message, Button, Input, Select } from "antd";
 import { useActionCreatorMutation } from "../services/postApi";
 
 const { Option } = Select;
 
-const CreateUser = ({ setLoading, loading, refetch, closeDiv }) => {
+const CreateUser = ({ setLoading, loading, refetch, closeDiv, editUser }) => {
   const [user_id, setUserId] = useState("");
   const [permissions, setPermissions] = useState({
     post: [],
@@ -12,6 +12,28 @@ const CreateUser = ({ setLoading, loading, refetch, closeDiv }) => {
     post_reply: [],
   });
   const [createUser] = useActionCreatorMutation();
+
+  useEffect(() => {
+    if (editUser) {
+      setPermissions(
+        editUser?.permission
+          ? JSON.parse(editUser?.permission)
+          : {
+              post: [],
+              post_comment: [],
+              post_reply: [],
+            }
+      );
+      setUserId(editUser?.id);
+    } else {
+      setPermissions({
+        post: [],
+        post_comment: [],
+        post_reply: [],
+      });
+      setUserId("");
+    }
+  }, [editUser]);
 
   // Permission options data
   const permissionOptions = {
@@ -54,13 +76,15 @@ const CreateUser = ({ setLoading, loading, refetch, closeDiv }) => {
 
   return (
     <div>
-      <Input
-        type="text"
-        placeholder="Enter UserId"
-        className="w-full p-2 my-5 bg-transparent des"
-        onChange={(e) => setUserId(e.target.value)}
-        value={user_id}
-      />
+      {!editUser && (
+        <Input
+          type="text"
+          placeholder="Enter UserId"
+          className="w-full p-2 my-5 bg-transparent des"
+          onChange={(e) => setUserId(e.target.value)}
+          value={user_id}
+        />
+      )}
 
       <div className="my-4">
         <h1 className="mb-5  text-lg">Permissions</h1>
@@ -124,7 +148,7 @@ const CreateUser = ({ setLoading, loading, refetch, closeDiv }) => {
           type="primary"
           disabled={loading}
         >
-          {loading ? "Loading..." : "Create User"}
+          {loading ? "Loading..." : editUser ? "Edit User" : "Create User"}
         </Button>
       </div>
     </div>
