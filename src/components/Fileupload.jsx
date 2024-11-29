@@ -25,6 +25,7 @@ const FilePreview = ({
   onRemove,
   type,
   handleVideoClick,
+  handleImgClick,
 }) => {
   const [, ref] = useDrag({
     type: "FILE",
@@ -46,7 +47,12 @@ const FilePreview = ({
   return (
     <div ref={(node) => ref(drop(node))} className="preview-item">
       {type === "image" ? (
-        <img src={previewUrl} alt="preview" className="preview-image" />
+        <img
+          src={previewUrl}
+          alt="preview"
+          className="preview-image"
+          onClick={() => handleImgClick(previewUrl)}
+        />
       ) : (
         <video
           src={previewUrl}
@@ -87,7 +93,7 @@ const Fileupload = ({
   const [files, setFiles] = useState([]);
   const [thumbnail, setThumbnail] = useState(null);
   const [description, setDescription] = useState("");
-  const [fileType, setFileType] = useState("image"); // Track if we're uploading images or videos
+  const [fileType, setFileType] = useState("image"); // Track if we're uploading images or videosm n
   const [status, setStatus] = useState("published"); // Track if we're uploading images or videos
   const [user_id, setUserId] = useState(""); // Track if we're uploading images or videos
   const [is_recommend, setIs_recommend] = useState(0); // Track if we're uploading images or videos
@@ -99,7 +105,9 @@ const Fileupload = ({
   });
   const users = data?.data?.list || [];
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalOpenImg, setIsModalOpenImg] = useState(false);
   const [currentVideo, setCurrentVideo] = useState(null);
+  const [currentImg, setCurrentImg] = useState(null);
 
   const handleVideoClick = (videoUrl) => {
     setCurrentVideo(videoUrl);
@@ -109,6 +117,16 @@ const Fileupload = ({
   const closeModal = () => {
     setIsModalOpen(false);
     setCurrentVideo(null);
+  };
+
+  const handleImgClick = (img) => {
+    setCurrentImg(img);
+    setIsModalOpenImg(true);
+  };
+
+  const closeModalImg = () => {
+    setIsModalOpenImg(false);
+    setCurrentImg(null);
   };
 
   useEffect(() => {
@@ -364,7 +382,7 @@ const Fileupload = ({
       if (fileType === "image" || (fileType === "video" && thumbnail)) {
         try {
           const response = await axios.get(
-            "http://movie_upload_api.qdhgtch.com:5343/upload.php"
+            "http://movie_upload_api.qdhgtch.com:5343/uploadv2.php"
           );
           const {
             accessKeyId,
@@ -662,6 +680,7 @@ const Fileupload = ({
                   onRemove={handleRemoveFile}
                   type={fileType}
                   handleVideoClick={handleVideoClick}
+                  handleImgClick={handleImgClick}
                 />
               ))}
             </div>
@@ -731,6 +750,18 @@ const Fileupload = ({
             controls
             className="max-h-[450px] w-full mt-5"
           />
+        )}
+      </Modal>
+      <Modal
+        visible={isModalOpenImg}
+        footer={null}
+        onCancel={closeModalImg}
+        title="Image Preview"
+        centered
+        width={400}
+      >
+        {currentImg && (
+          <img src={currentImg} className="max-h-[450px] w-full mt-5" />
         )}
       </Modal>
     </DndProvider>
