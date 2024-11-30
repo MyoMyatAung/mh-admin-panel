@@ -37,21 +37,27 @@ const ReplyList = () => {
 
   const [selectedStatus, setSelectedStatus] = useState(1); // Status for bulk edit
   const [editTarget, setEditTarget] = useState("replies"); // 'comments' or 'replies'
-
+  const token = localStorage.getItem("token");
   const [deleteComment, { isLoading: isDeleting }] = useDeleteCommentMutation();
 
   const {
     data: replies,
     isFetching: isFetchingReplies,
     refetch: refetchReplies,
-  } = useGetReplyListQuery({
-    q: queryReply,
-    type: typeReply,
-    pageReply,
-    status,
-  });
+  } = useGetReplyListQuery(
+    {
+      q: queryReply,
+      type: typeReply,
+      pageReply,
+      status,
+    },
+    { skip: !token }
+  );
   const [updateComment, { isLoading: isUpdating }] = useUpdateCommentMutation();
-  const { data: user, isLoading: isUserLoading } = useGetUserInfoQuery();
+  const { data: user, isLoading: isUserLoading } = useGetUserInfoQuery(
+    undefined,
+    { skip: !token }
+  );
 
   const userData = user?.data;
 

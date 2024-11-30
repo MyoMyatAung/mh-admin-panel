@@ -30,16 +30,23 @@ const Home = () => {
   const [status, setStatus] = useState("published");
   const [filter, setFilter] = useState("all");
   const [query, setQuery] = useState(""); // State for selected rows for comments
+  const token = localStorage.getItem("token");
 
-  const { data, isLoading, isFetching, refetch } = useGetListQuery({
-    page,
-    status,
-    q: query, // Pass the query state here
-    type,
-    filter,
-  });
+  const { data, isLoading, isFetching, refetch } = useGetListQuery(
+    {
+      page,
+      status,
+      q: query, // Pass the query state here
+      type,
+      filter,
+    },
+    { skip: !token }
+  );
   const [deletePost, { isLoading: isDeleting }] = useDeletePostMutation();
-  const { data: user, isLoading: isUserLoading } = useGetUserInfoQuery();
+  const { data: user, isLoading: isUserLoading } = useGetUserInfoQuery(
+    undefined,
+    { skip: !token }
+  );
   const [isFileUploadVisible, setFileUploadVisible] = useState(false);
   const [editingPost, setEditingPost] = useState(null); // Track if we are editing
   const [modalKey, setModalKey] = useState(0); // Key to force re-render

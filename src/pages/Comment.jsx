@@ -41,7 +41,7 @@ const Comment = () => {
 
   const [selectedRowKeys, setSelectedRowKeys] = useState([]); // State for selected rows for comments
   const [selectedReplyRowKeys, setSelectedReplyRowKeys] = useState([]); // State for selected rows for replies
-
+  const token = localStorage.getItem("token");
   const [selectedStatus, setSelectedStatus] = useState(1); // Status for bulk edit
   const [editTarget, setEditTarget] = useState("comments"); // 'comments' or 'replies'
 
@@ -51,7 +51,7 @@ const Comment = () => {
     refetch,
     isFetching,
     isLoading,
-  } = useGetCommentListQuery({ page, id, q: query, type });
+  } = useGetCommentListQuery({ page, id, q: query, type }, { skip: !token });
   const {
     data: replies,
     isFetching: isFetchingReplies,
@@ -62,8 +62,12 @@ const Comment = () => {
       skip: !selectedCommentId,
     }
   );
+
   const [updateComment, { isLoading: isUpdating }] = useUpdateCommentMutation();
-  const { data: user, isLoading: isUserLoading } = useGetUserInfoQuery();
+  const { data: user, isLoading: isUserLoading } = useGetUserInfoQuery(
+    undefined,
+    { skip: !token }
+  );
 
   const userData = user?.data;
   const permission = userData?.permission
