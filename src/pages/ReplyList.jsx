@@ -188,7 +188,7 @@ const ReplyList = () => {
   };
 
   if (isUserLoading) {
-    return <div></div>;
+    return <Spin fullscreen />;
   }
 
   return (

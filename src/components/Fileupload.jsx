@@ -4,8 +4,9 @@ import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 
 import {
+  useAllgetCreatorsQuery,
   useCreatePostMutation,
-  useGetCreatorsQuery,
+  useGetUserInfoQuery,
 } from "../services/postApi";
 import { message, Button, Select, Checkbox, Modal } from "antd";
 import axios from "axios";
@@ -95,14 +96,14 @@ const Fileupload = ({
   const [description, setDescription] = useState("");
   const [fileType, setFileType] = useState("image"); // Track if we're uploading images or videosm n
   const [status, setStatus] = useState("published"); // Track if we're uploading images or videos
-  const [user_id, setUserId] = useState(""); // Track if we're uploading images or videos
   const [is_recommend, setIs_recommend] = useState(0); // Track if we're uploading images or videos
   const [is_top, setIs_top] = useState(0); // Track if we're uploading images or videos
   const [createPost] = useCreatePostMutation();
-  const { data, isLoading: isUsersLoading } = useGetCreatorsQuery({
-    page: 1,
-    pageSize: 30,
-  });
+  const { data, isLoading: isUsersLoading } = useAllgetCreatorsQuery();
+  const { data: userData, isLoading: isUserLoading } =
+    useGetUserInfoQuery(undefined);
+  const [user_id, setUserId] = useState("");
+
   const users = data?.data?.list || [];
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isModalOpenImg, setIsModalOpenImg] = useState(false);
@@ -130,6 +131,12 @@ const Fileupload = ({
   };
 
   useEffect(() => {
+    if (!user_id && userData) {
+      setUserId(userData?.data.user_id);
+    }
+  }, [userData, user_id]);
+
+  useEffect(() => {
     if (post) {
       setDescription(post.description || "");
       setFileType(post.file_type || "image");
@@ -154,7 +161,6 @@ const Fileupload = ({
       setStatus("published");
       setIs_recommend(0);
       setIs_top(0);
-      setUserId("");
       setDescription("");
       setFiles([]);
       setThumbnail(null);
@@ -171,7 +177,7 @@ const Fileupload = ({
 
       const video = document.createElement("video");
       video.src = URL.createObjectURL(videoFile);
-
+      console.log("times");
       video.onloadeddata = () => {
         // Seek to a specific timestamp for a meaningful frame
         video.currentTime = 1;
@@ -208,6 +214,31 @@ const Fileupload = ({
       video.onerror = () => reject(new Error("Failed to generate thumbnail"));
     });
   };
+
+  // Cache to store the generated thumbnails for each video file
+
+  const onThumbnailDrop = useCallback(async (acceptedFiles) => {
+    const thumbnailImage = acceptedFiles.find((file) =>
+      file.type.startsWith("image/")
+    );
+    if (acceptedFiles.length > 1) {
+      message.error("You can only upload one image for the thumbnail.");
+      return;
+    }
+    if (thumbnailImage) {
+      setThumbnail(thumbnailImage);
+    } else {
+      message.error("Please upload a valid image for the thumbnail.");
+    }
+  }, []);
+
+  const {
+    getRootProps: getThumbnailRootProps,
+    getInputProps: getThumbnailInputProps,
+  } = useDropzone({
+    accept: "image/*",
+    onDrop: onThumbnailDrop,
+  });
 
   const onDrop = useCallback(
     async (acceptedFiles) => {
@@ -564,12 +595,6 @@ const Fileupload = ({
     }
   };
 
-  useEffect(() => {
-    if (!user_id && users?.length > 0) {
-      setUserId(users[0].id); // Set default user_id to the first user in the list
-    }
-  }, [users, user_id]);
-
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="file-upload-container">
@@ -613,7 +638,7 @@ const Fileupload = ({
         >
           {users?.map((user) => (
             <Option key={user.id} value={user.id}>
-              {user.username}
+              {user.nickname}
             </Option>
           ))}
         </Select>
@@ -686,40 +711,63 @@ const Fileupload = ({
             </div>
           </div>
 
-          {thumbnail && (
-            <div>
+          {fileType === "video" && (
+            <div className="mt-0 max-md:mt-2">
               <div>
-                <p className="my-2">Thumbnail</p>
+                <p className="my-2">Select Thumbnail</p>
                 <p className="support">Support format : PNG, JPG</p>
               </div>
-              <div className="mt-5 thumbnail-preview">
-                <img
-                  src={
-                    typeof thumbnail === "string"
-                      ? thumbnail
-                      : URL.createObjectURL(thumbnail)
-                  }
-                  alt="thumbnail preview"
-                  className="preview-image"
-                />
-                <button
-                  onClick={() => setThumbnail(null)}
-                  className="remove-btn"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="10"
-                    height="10"
-                    viewBox="0 0 10 10"
-                    fill="none"
-                  >
-                    <path
-                      d="M5 3.88906L8.88906 0L10 1.11094L6.11094 5L10 8.88906L8.88906 10L5 6.11094L1.11094 10L0 8.88906L3.88906 5L0 1.11094L1.11094 0L5 3.88906Z"
-                      fill="white"
-                      fillOpacity="0.8"
-                    />
-                  </svg>
-                </button>
+              <div className="preview-container">
+                <div {...getThumbnailRootProps()} className="mt-5 dropzone">
+                  <div className="flex items-center justify-center">
+                    <input {...getThumbnailInputProps()} />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="13"
+                      height="13"
+                      viewBox="0 0 13 13"
+                      fill="none"
+                    >
+                      <path
+                        d="M12.0498 6.05005H7.5498V1.55005C7.5498 1.35114 7.47079 1.16037 7.33013 1.01972C7.18948 0.879067 6.99872 0.800049 6.7998 0.800049C6.60089 0.800049 6.41013 0.879067 6.26947 1.01972C6.12882 1.16037 6.0498 1.35114 6.0498 1.55005V6.05005H1.5498C1.35089 6.05005 1.16013 6.12907 1.01947 6.26972C0.878822 6.41037 0.799805 6.60114 0.799805 6.80005C0.799805 6.99896 0.878822 7.18973 1.01947 7.33038C1.16013 7.47103 1.35089 7.55005 1.5498 7.55005H6.0498V12.05C6.0498 12.249 6.12882 12.4397 6.26947 12.5804C6.41013 12.721 6.60089 12.8 6.7998 12.8C6.99872 12.8 7.18948 12.721 7.33013 12.5804C7.47079 12.4397 7.5498 12.249 7.5498 12.05V7.55005H12.0498C12.2487 7.55005 12.4395 7.47103 12.5801 7.33038C12.7208 7.18973 12.7998 6.99896 12.7998 6.80005C12.7998 6.60114 12.7208 6.41037 12.5801 6.26972C12.4395 6.12907 12.2487 6.05005 12.0498 6.05005Z"
+                        fill="white"
+                      />
+                    </svg>
+                  </div>
+                </div>
+                {thumbnail && (
+                  <>
+                    <div className="mt-5 thumbnail-preview">
+                      <img
+                        src={
+                          typeof thumbnail === "string"
+                            ? thumbnail
+                            : URL.createObjectURL(thumbnail)
+                        }
+                        alt="thumbnail preview"
+                        className="preview-image"
+                      />
+                      <button
+                        onClick={() => setThumbnail(null)}
+                        className="remove-btn"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="10"
+                          height="10"
+                          viewBox="0 0 10 10"
+                          fill="none"
+                        >
+                          <path
+                            d="M5 3.88906L8.88906 0L10 1.11094L6.11094 5L10 8.88906L8.88906 10L5 6.11094L1.11094 10L0 8.88906L3.88906 5L0 1.11094L1.11094 0L5 3.88906Z"
+                            fill="white"
+                            fillOpacity="0.8"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           )}

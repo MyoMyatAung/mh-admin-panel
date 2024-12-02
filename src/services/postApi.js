@@ -118,6 +118,11 @@ export const PostApi = createApi({
         );
       },
     }),
+    allgetCreators: builder.query({
+      query: () => {
+        return convertToSecureUrl(`panel/post/all/creator/list`);
+      },
+    }),
     actionCreator: builder.mutation({
       query: (data) => ({
         url: `panel/post/creator/action`,
@@ -177,4 +182,5 @@ export const {
   useUpdateCommentMutation,
   useGetReplyListQuery,
   useGetUserInfoQuery,
+  useAllgetCreatorsQuery,
 } = PostApi;

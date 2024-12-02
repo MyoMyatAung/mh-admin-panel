@@ -298,7 +298,7 @@ const CommentList = () => {
   };
 
   if (isUserLoading) {
-    return <div></div>;
+    return <Spin fullscreen />;
   }
 
   return (

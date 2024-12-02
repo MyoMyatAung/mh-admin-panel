@@ -347,9 +347,8 @@ const Comment = () => {
   const handleTypeReplyChange = (value) => {
     setTypeReply(value);
   };
-
   if (isUserLoading) {
-    return <div></div>;
+    return <Spin fullscreen />;
   }
 
   return (

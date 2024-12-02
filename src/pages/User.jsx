@@ -138,9 +138,8 @@ const User = () => {
   ];
 
   if (isUserLoading) {
-    return <div></div>;
+    return <Spin fullscreen />;
   }
-
   return (
     <ConfigProvider
       theme={{
