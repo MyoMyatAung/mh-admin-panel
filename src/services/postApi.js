@@ -60,13 +60,17 @@ export const PostApi = createApi({
 
     getList: builder.query({
       query: (data) => {
-        const { page, status, q, type, filter } = data;
-        let url = `panel/post/list?page=${page}&status=${status}&ignore_safe_check=true`;
+        const { page, status, q, type, filter, order } = data;
+
+        let url = `panel/post/list?page=${page}&status=${status}`;
         if (q) {
           url += `&q=${encodeURIComponent(q)}&type=${type}`; // Append query parameter if it exists
         }
         if (filter !== "all") {
           url += `&filter=${filter}`;
+        }
+        if (filter !== "all" && filter !== "top") {
+          url += `&order=${order}`;
         }
         return convertToSecureUrl(url);
       },

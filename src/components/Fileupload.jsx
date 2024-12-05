@@ -8,7 +8,15 @@ import {
   useCreatePostMutation,
   useGetUserInfoQuery,
 } from "../services/postApi";
-import { message, Button, Select, Checkbox, Modal } from "antd";
+import {
+  message,
+  Button,
+  Select,
+  Checkbox,
+  Modal,
+  Input,
+  InputNumber,
+} from "antd";
 import axios from "axios";
 import TextArea from "antd/es/input/TextArea";
 
@@ -96,19 +104,22 @@ const Fileupload = ({
   const [description, setDescription] = useState("");
   const [fileType, setFileType] = useState("image"); // Track if we're uploading images or videosm n
   const [status, setStatus] = useState("published"); // Track if we're uploading images or videos
+  const [score, setScore] = useState(""); // Track if we're uploading images or videos
   const [is_recommend, setIs_recommend] = useState(0); // Track if we're uploading images or videos
   const [is_top, setIs_top] = useState(0); // Track if we're uploading images or videos
   const [createPost] = useCreatePostMutation();
-  const { data, isLoading: isUsersLoading } = useAllgetCreatorsQuery();
   const { data: userData, isLoading: isUserLoading } =
     useGetUserInfoQuery(undefined);
   const [user_id, setUserId] = useState("");
+  const { data, isLoading: isUsersLoading } = useAllgetCreatorsQuery();
 
   const users = data?.data?.list || [];
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isModalOpenImg, setIsModalOpenImg] = useState(false);
   const [currentVideo, setCurrentVideo] = useState(null);
   const [currentImg, setCurrentImg] = useState(null);
+  const [customStatus, setCustomStatus] = useState(false);
+  const [customInput, setCustomInput] = useState(""); // State to hold the custom user ID input
 
   const handleVideoClick = (videoUrl) => {
     setCurrentVideo(videoUrl);
@@ -136,14 +147,34 @@ const Fileupload = ({
     }
   }, [userData, user_id]);
 
+  console.log(userData);
+  console.log(user_id);
+  console.log(post);
+
   useEffect(() => {
-    if (post) {
+    if (post && users) {
       setDescription(post.description || "");
       setFileType(post.file_type || "image");
       setStatus(post.status || "published");
-      setUserId(post?.user_id || "");
+      setScore(post.score || "");
+      // setUserId(post?.user_id || "");
       setIs_recommend(post?.is_recommend || 0);
       setIs_top(post?.is_top || 0);
+
+      // Check if post.user_id exists in the users array
+      const userExists = users.some((user) => user.id === post.user_id);
+
+      if (userExists) {
+        // If post.user_id exists in the users array, set it normally
+        setUserId(post.user_id);
+        setCustomStatus(false); // No custom input needed
+        setCustomInput(""); // Clear custom input
+      } else {
+        // If post.user_id doesn't exist in the users array, set it as custom
+        setUserId("custom");
+        setCustomStatus(true); // Show custom input
+        setCustomInput(post.user_id); // Set the custom user_id
+      }
 
       if (post.files) {
         // Parse and set files for editing
@@ -161,11 +192,13 @@ const Fileupload = ({
       setStatus("published");
       setIs_recommend(0);
       setIs_top(0);
+      setScore("");
+      setUserId("");
       setDescription("");
       setFiles([]);
       setThumbnail(null);
     }
-  }, [isVisible, post]);
+  }, [isVisible, post, users]);
 
   const generateThumbnail = (videoFile) => {
     return new Promise((resolve, reject) => {
@@ -177,7 +210,7 @@ const Fileupload = ({
 
       const video = document.createElement("video");
       video.src = URL.createObjectURL(videoFile);
-      console.log("times");
+
       video.onloadeddata = () => {
         // Seek to a specific timestamp for a meaningful frame
         video.currentTime = 1;
@@ -214,6 +247,8 @@ const Fileupload = ({
       video.onerror = () => reject(new Error("Failed to generate thumbnail"));
     });
   };
+
+  console.log(user_id);
 
   // Cache to store the generated thumbnails for each video file
 
@@ -404,6 +439,7 @@ const Fileupload = ({
     const parts = filePath.split(".");
     return parts.length > 1 ? parts[parts.length - 1] : ""; // Get the last part after the dot
   };
+  console.log(score);
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -558,13 +594,15 @@ const Fileupload = ({
           const postPayload = {
             is_top,
             is_recommend,
-            user_id: +user_id,
+            user_id: user_id === "custom" ? +customInput : +user_id,
             description,
             files: uploadedFileUrls,
             file_type: fileType,
             status,
+            ...(score && score !== "" && { score }), // Conditionally add score if it's not an empty string
             ...(post && { post_id: post.id }),
           };
+          console.log(postPayload);
 
           await createPost(postPayload).unwrap();
           setIs_recommend(0);
@@ -595,6 +633,19 @@ const Fileupload = ({
     }
   };
 
+  useEffect(() => {
+    if (user_id === "custom") {
+      setCustomStatus(true);
+      setCustomInput(""); // Reset the custom input field when "custom" is selected
+    } else {
+      setCustomStatus(false);
+    }
+  }, [user_id]);
+
+  const handleInputChange = (e) => {
+    setCustomInput(e.target.value); // Update the custom user ID input
+  };
+
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="file-upload-container">
@@ -606,6 +657,16 @@ const Fileupload = ({
           value={description}
           rows={4}
         />
+        <div>
+          <label className="mr-2">Score</label>
+          <InputNumber
+            value={score}
+            placeholder="Enter score"
+            className="mb-3 w-[200px]"
+            onChange={(value) => setScore(value)}
+          />
+        </div>
+
         <Select
           value={fileType}
           onChange={(value) => {
@@ -634,14 +695,23 @@ const Fileupload = ({
           onChange={(value) => setUserId(value)} // Update user_id on selection
           placeholder="Select User"
           style={{ marginBottom: 10, marginRight: 10, width: 120 }}
-          loading={isUsersLoading} // Show loading state when fetching users
+          loading={isUsersLoading || isUserLoading} // Show loading state when fetching users
         >
           {users?.map((user) => (
             <Option key={user.id} value={user.id}>
               {user.nickname}
             </Option>
           ))}
+          <Option value={"custom"}>Custom id</Option>
         </Select>
+        {customStatus && (
+          <Input
+            className="w-[150px] my-2 mr-2"
+            placeholder="Enter userId"
+            value={customInput} // If it's "custom", clear the input
+            onChange={handleInputChange}
+          />
+        )}
         <Checkbox
           onChange={onChange}
           checked={is_recommend === 1 ? true : false}

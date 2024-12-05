@@ -29,6 +29,7 @@ const Home = () => {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState("published");
   const [filter, setFilter] = useState("all");
+  const [order, setOrder] = useState("asc");
   const [query, setQuery] = useState(""); // State for selected rows for comments
   const token = localStorage.getItem("token");
 
@@ -39,6 +40,7 @@ const Home = () => {
       q: query, // Pass the query state here
       type,
       filter,
+      order,
     },
     { skip: !token }
   );
@@ -92,6 +94,12 @@ const Home = () => {
   const handleFilterChange = (value) => {
     refetch();
     setFilter(value);
+    setPage(1);
+  };
+
+  const handleOrderChange = (value) => {
+    refetch();
+    setOrder(value);
     setPage(1);
   };
 
@@ -189,6 +197,13 @@ const Home = () => {
           },
         ]
       : []),
+
+    {
+      title: "Score",
+      dataIndex: "score",
+      key: "score",
+      width: 80,
+    },
 
     {
       title: "Type",
@@ -406,6 +421,17 @@ const Home = () => {
                   <Option value="all">All</Option>
                   <Option value="top">Top</Option>
                   <Option value="recommend">Recommend</Option>
+                  <Option value="score">Score</Option>
+                </Select>
+                <Select
+                  className="select-pub mb-3"
+                  defaultValue="asc"
+                  value={order}
+                  onChange={handleOrderChange}
+                  style={{ width: 120, marginRight: 10 }}
+                >
+                  <Option value="asc">Asc</Option>
+                  <Option value="desc">Desc</Option>
                 </Select>
               </div>
 
