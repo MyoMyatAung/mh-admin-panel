@@ -34,7 +34,7 @@ const customFetchBaseQuery = async (args, api, extraOptions) => {
       if (token) {
         headers.set("Authorization", `Bearer ${token}`);
       }
-
+      console.log("Request Headers:", headers.get("Authorization"));
       return headers;
     },
   })(args, api, extraOptions);
@@ -172,6 +172,14 @@ export const PostApi = createApi({
       }),
       transformResponse: (response) => response,
     }),
+    createWebViewPost: builder.mutation({
+      query: (data) => ({
+        url: `panel/post/web-view/create`,
+        method: "POST",
+        body: generateData(data),
+      }),
+      transformResponse: (response) => response,
+    }),
   }),
 });
 
@@ -187,4 +195,5 @@ export const {
   useGetReplyListQuery,
   useGetUserInfoQuery,
   useAllgetCreatorsQuery,
+  useCreateWebViewPostMutation,
 } = PostApi;

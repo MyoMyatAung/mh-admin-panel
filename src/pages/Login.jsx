@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 
 import { Button, Input, ConfigProvider, theme, message } from "antd";
 import axios from "axios";
@@ -30,7 +30,7 @@ const Login = () => {
           generateData({
             username,
             password,
-          })
+          }),
         );
 
         // Assuming response contains the token in response.data.token

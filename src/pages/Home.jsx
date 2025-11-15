@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Table,
   Button,
@@ -20,6 +20,7 @@ import {
 import Fileupload from "../components/Fileupload";
 import Navbar from "../components/Navbar";
 import { Link } from "react-router-dom";
+import CreateUnlockPost from "../components/CreateUnlockPost";
 
 const { Option } = Select;
 const { Search } = Input;
@@ -50,6 +51,7 @@ const Home = () => {
     { skip: !token }
   );
   const [isFileUploadVisible, setFileUploadVisible] = useState(false);
+  const [isCreatePostUnlockVisible, setCreatePostUnlockVisible] = useState(false);
   const [editingPost, setEditingPost] = useState(null); // Track if we are editing
   const [modalKey, setModalKey] = useState(0); // Key to force re-render
   const [loading, setLoading] = useState(false);
@@ -82,6 +84,7 @@ const Home = () => {
       message.success("Post deleted successfully");
       refetch();
     } catch (error) {
+      console.error("Failed to delete post:", error);
       message.error("Failed to delete post");
     }
   };
@@ -242,8 +245,8 @@ const Home = () => {
                       fill="none"
                     >
                       <path
-                        fill-rule="evenodd"
-                        clip-rule="evenodd"
+                        fillRule="evenodd"
+                        clipRule="evenodd"
                         d="M13.0579 8.19176L14.2851 6.5569C14.8931 5.7469 15.1491 4.74889 15.0061 3.74589C14.8631 2.74289 14.3391 1.85689 13.5291 1.24889C11.8581 -0.00510502 9.47614 0.331895 8.22114 2.00489L1.46913 10.9999C-0.542874 13.6829 1.24713 16.8789 1.32413 17.0139C1.42813 17.1949 1.60313 17.3239 1.80713 17.3709C1.86513 17.3849 2.42513 17.5089 3.20613 17.5089C4.46913 17.5089 6.30713 17.1859 7.53314 15.5519L12.9017 8.39987C12.9329 8.37056 12.962 8.33806 12.9886 8.30266C13.0153 8.26716 13.0384 8.23006 13.0579 8.19176ZM2.47713 15.9619C3.25813 16.0569 5.22813 16.1239 6.33313 14.6509L11.3292 7.99506L7.66454 5.24362L2.66813 11.8999C1.54113 13.4039 2.16113 15.2449 2.47713 15.9619ZM8.56474 4.04449L12.2299 6.79517L13.0851 5.6559C13.8441 4.6459 13.6391 3.20689 12.6291 2.44789C11.6181 1.69089 10.1781 1.89589 9.42014 2.90489L8.56474 4.04449Z"
                         fill="#8AC1FF"
                       />
@@ -343,7 +346,7 @@ const Home = () => {
   const handleTypeChange = (value) => {
     setType(value);
   };
-  const onSearch = (value, _e) => {
+  const onSearch = (value) => {
     setQuery(value);
     setPage(1);
   };
@@ -373,6 +376,7 @@ const Home = () => {
             >
               <div className="flex items-center max-md:flex-wrap max-md:items-start">
                 {(is_admin === 1 || permission?.post?.includes("create")) && (
+                  <>
                   <Button
                     type="primary"
                     className="add-btn mb-3"
@@ -392,12 +396,39 @@ const Home = () => {
                       <path
                         d="M1 6.85007H13M7.15021 1L7.15021 13"
                         stroke="white"
-                        stroke-width="2"
-                        stroke-linecap="round"
+                        strokeWidth="2"
+                        strokeLinecap="round"
                       />
                     </svg>
                     Create Post
                   </Button>
+                  <Button
+                    type="primary"
+                    className="add-btn mb-3"
+                    onClick={() => {
+                      setModalKey((prevKey) => prevKey + 1); // Update key to force re-render
+                      setEditingPost(null); // Clear editingPost for new post
+                      setCreatePostUnlockVisible(true);
+                    }}
+                    style={{ marginRight: 10 }}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 14 14"
+                      fill="none"
+                    >
+                      <path
+                        d="M1 6.85007H13M7.15021 1L7.15021 13"
+                        stroke="white"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    Create Unlockable Post
+                  </Button>
+                  </>
                 )}
 
                 <Select
@@ -548,11 +579,58 @@ const Home = () => {
                 </div>
               </div>
             </Modal>
+            <Modal
+              key={modalKey} // Force re-render on key change
+              title={"Upload Unlockable Post"}
+              visible={isCreatePostUnlockVisible}
+              onCancel={() => setCreatePostUnlockVisible(false)}
+              closable={!loading} // Disable close button while loading
+              maskClosable={!loading}
+              footer={null}
+            >
+              <div
+                style={{
+                  position: "relative", // Make sure the parent div is positioned to allow absolute positioning of the progress bar
+                  pointerEvents: loading ? "none" : "auto",
+                }}
+              >
+                {((uploadPercentage > 0 && uploadPercentage < 100) ||
+                  loading) && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "50%",
+                      left: "50%",
+                      transform: "translate(-50%, -50%)",
+                      width: "100%", // Optional: if you want the progress bar to fill the width of the parent container
+                      zIndex: 9999, // Ensure the progress bar stays on top
+                      opacity: 2,
+                    }}
+                  >
+                    <Progress percent={uploadPercentage} />
+                  </div>
+                )}
+                <div
+                  style={{
+                    position: "relative", // Make sure the parent div is positioned to allow absolute positioning of the progress bar
+                    pointerEvents: loading ? "none" : "auto",
+                    opacity: loading ? 0.1 : 1,
+                  }}
+                >
+                  <CreateUnlockPost
+                    onClose={() => setCreatePostUnlockVisible(false)}
+                    setLoading={setLoading}
+                    loading={loading}
+                    setUploadPercentage={setUploadPercentage}
+                  />
+                </div>
+              </div>
+            </Modal>
           </>
         ) : (
           <div className="flex justify-center items-center h-[60vh]">
             <h1 className="text-white text-lg">
-              You don't have access to view posts
+              {"You don't have access to view posts"}
             </h1>
           </div>
         )}
