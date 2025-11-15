@@ -44,6 +44,7 @@ const Login = () => {
         message.success("Login successful!");
         navigate("/"); // Redirect to home page
       } catch (error) {
+        console.log("Login Error:", error);
         // Handle errors (e.g., incorrect credentials or server error)
         message.error(
           error.response?.data?.message || "Login failed. Please try again."
