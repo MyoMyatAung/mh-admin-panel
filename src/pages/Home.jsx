@@ -19,6 +19,7 @@ import {
 } from "../services/postApi";
 import Navbar from "../components/Navbar";
 import { Link } from "react-router-dom";
+import CreateUnlockPost from "../components/CreateUnlockPost";
 import { DatePicker } from "antd";
 import moment from "moment"; // For formatting dates
 import Form from "../components/Form";
@@ -445,7 +446,7 @@ const Home = () => {
                     type="primary"
                     className="add-btn mb-3"
                     onClick={() => {
-                      setModalKey((prevKey) => prevKey + 2); // Update key to force re-render
+                      setModalKey((prevKey) => prevKey + 1); // Update key to force re-render
                       setEditingPost(null); // Clear editingPost for new post
                       setCreatePostUnlockVisible(true);
                     }}
@@ -671,7 +672,10 @@ const Home = () => {
                   }}
                 >
                   <CreateUnlockPost
+<<<<<<< HEAD
                     post={null}
+=======
+>>>>>>> 89579f1 (Resolve Conflict)
                     onClose={() => setCreatePostUnlockVisible(false)}
                     setLoading={setLoading}
                     loading={loading}

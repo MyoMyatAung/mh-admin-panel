@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useCallback, useEffect } from "react";
+import { useDropzone } from "react-dropzone";
+import { DndProvider, useDrag, useDrop } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
 
 import {
   useAllgetCreatorsQuery,
   useCreatePostMutation,
-  useGetConfigQuery,
   useGetUserInfoQuery,
 } from "../services/postApi";
 import FileDropzone from "./FileDropzone";
@@ -17,19 +19,77 @@ import {
   Input,
   InputNumber,
 } from "antd";
-
 import axios from "axios";
 import TextArea from "antd/es/input/TextArea";
 
 import { S3Client } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
-import { md5 } from "js-md5"; // You'll need to install js-md5: npm install js-md5
+
+const MAX_IMAGES = 9;
 
 const { Option } = Select;
 
+const FilePreview = ({
+  file,
+  index,
+  moveFile,
+  onRemove,
+  type,
+  handleVideoClick,
+  handleImgClick,
+}) => {
+  const [, ref] = useDrag({
+    type: "FILE",
+    item: { index },
+  });
+
+  const [, drop] = useDrop({
+    accept: "FILE",
+    hover: (draggedItem) => {
+      if (draggedItem.index !== index) {
+        moveFile(draggedItem.index, index);
+        draggedItem.index = index;
+      }
+    },
+  });
+
+  const previewUrl = file?.resourceURL || URL.createObjectURL(file);
+
+  return (
+    <div ref={(node) => ref(drop(node))} className="preview-item">
+      {type === "image" ? (
+        <img
+          src={previewUrl}
+          alt="preview"
+          className="preview-image"
+          onClick={() => handleImgClick(previewUrl)}
+        />
+      ) : (
+        <video
+          src={previewUrl}
+          className="preview-video"
+          onClick={() => handleVideoClick(previewUrl)}
+        />
+      )}
+      <button onClick={() => onRemove(file)} className="remove-btn">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="10"
+          height="10"
+          viewBox="0 0 10 10"
+          fill="none"
+        >
+          <path
+            d="M9.24264 8.18191L6.06066 4.99993L9.24264 1.81795C9.38329 1.6773 9.46231 1.48653 9.46231 1.28762C9.46231 1.08871 9.38329 0.897941 9.24264 0.757289C9.10199 0.616637 8.91122 0.537619 8.71231 0.53762C8.5134 0.537619 8.32263 0.616637 8.18198 0.757289L5 3.93927L1.81802 0.757289C1.67737 0.616637 1.4866 0.537619 1.28769 0.53762C1.08878 0.537619 0.898012 0.616637 0.757359 0.757289C0.616707 0.897941 0.53769 1.08871 0.53769 1.28762C0.53769 1.48653 0.616707 1.6773 0.757359 1.81795L3.93934 4.99993L0.757359 8.18191C0.616707 8.32256 0.537689 8.51333 0.537689 8.71224C0.537689 8.91115 0.616707 9.10192 0.757359 9.24257C0.898012 9.38322 1.08878 9.46224 1.28769 9.46224C1.4866 9.46224 1.67737 9.38322 1.81802 9.24257L5 6.06059L8.18198 9.24257C8.32263 9.38322 8.5134 9.46224 8.71231 9.46224C8.91122 9.46224 9.10199 9.38322 9.24264 9.24257C9.38329 9.10192 9.46231 8.91115 9.46231 8.71224C9.46231 8.51333 9.38329 8.32256 9.24264 8.18191Z"
+            fill="white"
+          />
+        </svg>
+      </button>
+    </div>
+  );
+};
+
 const Fileupload = ({
-  thumbnail,
-  setThumbnail,
   setEditingPost,
   closeDiv,
   setPage,
@@ -38,44 +98,60 @@ const Fileupload = ({
   setLoading,
   loading,
   isVisible,
-  uploadPercentage,
-  setUploadPercentage,
-  files,
-  setFiles,
-  fileType,
-  setFileType,
-  audioFile,
-  setaudioFile,
-  setFileName,
-}) => {
-  // const [files, setFiles] = useState([]);
 
+  setUploadPercentage,
+}) => {
+  const [files, setFiles] = useState([]);
+  const [thumbnail, setThumbnail] = useState(null);
   const [description, setDescription] = useState("");
+  const [fileType, setFileType] = useState("image"); // Track if we're uploading images or videosm n
   const [status, setStatus] = useState("published"); // Track if we're uploading images or videos
   const [score, setScore] = useState(""); // Track if we're uploading images or videos
   const [is_recommend, setIs_recommend] = useState(0); // Track if we're uploading images or videos
   const [is_top, setIs_top] = useState(0); // Track if we're uploading images or videos
-  const [audioDuration, setaudioDuration] = useState("");
   const [createPost] = useCreatePostMutation();
   const { data: userData, isLoading: isUserLoading } =
     useGetUserInfoQuery(undefined);
   const [user_id, setUserId] = useState("");
-  const { data, isLoading: isUsersLoading } = useAllgetCreatorsQuery({
-    role: 0,
-  });
-
-  const { data: config } = useGetConfigQuery();
+  const { data, isLoading: isUsersLoading } = useAllgetCreatorsQuery();
 
   const users = data?.data?.list || [];
-
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalOpenImg, setIsModalOpenImg] = useState(false);
+  const [currentVideo, setCurrentVideo] = useState(null);
+  const [currentImg, setCurrentImg] = useState(null);
   const [customStatus, setCustomStatus] = useState(false);
   const [customInput, setCustomInput] = useState(""); // State to hold the custom user ID input
 
+  const handleVideoClick = (videoUrl) => {
+    setCurrentVideo(videoUrl);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setCurrentVideo(null);
+  };
+
+  const handleImgClick = (img) => {
+    setCurrentImg(img);
+    setIsModalOpenImg(true);
+  };
+
+  const closeModalImg = () => {
+    setIsModalOpenImg(false);
+    setCurrentImg(null);
+  };
+
   useEffect(() => {
-    if (!post && userData) {
+    if (!user_id && userData) {
       setUserId(userData?.data.user_id);
     }
-  }, [userData, post]);
+  }, [userData, user_id]);
+
+  console.log(userData);
+  console.log(user_id);
+  console.log(post);
 
   useEffect(() => {
     if (post && users) {
@@ -83,7 +159,6 @@ const Fileupload = ({
       setFileType(post.file_type || "image");
       setStatus(post.status || "published");
       setScore(post.score || "");
-
       // setUserId(post?.user_id || "");
       setIs_recommend(post?.is_recommend || 0);
       setIs_top(post?.is_top || 0);
@@ -103,19 +178,14 @@ const Fileupload = ({
         setCustomInput(post.user_id); // Set the custom user_id
       }
 
-      const parsedFiles = post.files ? JSON.parse(post.files) : [];
-
-      if (post?.file_type === "audio") {
-        setFileName(parsedFiles[0]?.resourceURL || "");
-      }
-
-      if (parsedFiles.length > 0) {
+      if (post.files) {
+        // Parse and set files for editing
+        const parsedFiles = JSON.parse(post.files);
         setFiles(
           parsedFiles.filter(
             (file) => file.type === "video" || file.type === "image"
           )
         );
-
         if (parsedFiles[0].type === "video") {
           setThumbnail(parsedFiles[0]?.thumbnail || null);
         }
@@ -125,12 +195,171 @@ const Fileupload = ({
       setIs_recommend(0);
       setIs_top(0);
       setScore("");
-      setFileName("");
+      setUserId("");
       setDescription("");
       setFiles([]);
       setThumbnail(null);
     }
   }, [isVisible, post, users]);
+
+  const generateThumbnail = (videoFile) => {
+    return new Promise((resolve, reject) => {
+      // Ensure the input is a File or Blob
+      if (!(videoFile instanceof File || videoFile instanceof Blob)) {
+        reject(new Error("Invalid video file provided"));
+        return;
+      }
+
+      const video = document.createElement("video");
+      video.src = URL.createObjectURL(videoFile);
+
+      video.onloadeddata = () => {
+        // Seek to a specific timestamp for a meaningful frame
+        video.currentTime = 1;
+      };
+
+      video.onseeked = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // Convert the canvas to a Blob and resolve with a File object
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const fileName = `${Date.now()}.jpg`; // Generate a unique file name
+              const file = new File([blob], fileName, {
+                type: "image/jpeg",
+              });
+              resolve(file); // Resolve with the File object
+            } else {
+              reject(new Error("Failed to convert canvas to Blob"));
+            }
+          },
+          "image/jpeg",
+          0.9 // Quality factor for JPEG compression
+        );
+
+        URL.revokeObjectURL(video.src); // Clean up resources
+      };
+
+      video.onerror = () => reject(new Error("Failed to generate thumbnail"));
+    });
+  };
+
+  console.log(user_id);
+
+  // Cache to store the generated thumbnails for each video file
+
+  const onThumbnailDrop = useCallback(async (acceptedFiles) => {
+    const thumbnailImage = acceptedFiles.find((file) =>
+      file.type.startsWith("image/")
+    );
+    if (acceptedFiles.length > 1) {
+      message.error("You can only upload one image for the thumbnail.");
+      return;
+    }
+    if (thumbnailImage) {
+      setThumbnail(thumbnailImage);
+    } else {
+      message.error("Please upload a valid image for the thumbnail.");
+    }
+  }, []);
+
+  const {
+    getRootProps: getThumbnailRootProps,
+    getInputProps: getThumbnailInputProps,
+  } = useDropzone({
+    accept: "image/*",
+    onDrop: onThumbnailDrop,
+  });
+
+  const onDrop = useCallback(
+    async (acceptedFiles) => {
+      if (fileType === "image") {
+        const newImages = acceptedFiles.filter((file) =>
+          file.type.startsWith("image/")
+        );
+        const hasVideo = acceptedFiles.some((file) =>
+          file.type.startsWith("video/")
+        );
+
+        if (hasVideo) {
+          message.error("Please select only images in Image mode.");
+          return;
+        }
+
+        if (newImages.length + files.length > MAX_IMAGES) {
+          message.error(
+            `You can only upload a maximum of ${MAX_IMAGES} images`
+          );
+          return;
+        }
+
+        const processedFiles = await Promise.all(
+          newImages.map(async (file) => {
+            const { width, height } = await getImageDimensions(file);
+            const suffix = getFileSuffix(file.name || file.path);
+            return {
+              image: file,
+              size: file.size,
+              width,
+              height,
+              suffix, // e.g., 'jpeg' or 'png'
+              type: "image",
+            };
+          })
+        );
+        setFiles((prevFiles) => [...prevFiles, ...processedFiles]);
+      } else if (fileType === "video") {
+        const videoFile = acceptedFiles.find((file) =>
+          file.type.startsWith("video/")
+        );
+        const hasImage = acceptedFiles.some((file) =>
+          file.type.startsWith("image/")
+        );
+
+        if (hasImage) {
+          message.error("Please select only a video in Video mode.");
+          return;
+        }
+
+        if (acceptedFiles.length > 1) {
+          message.error("You can only upload one video.");
+          return;
+        }
+
+        if (videoFile) {
+          const { width, height } = await getVideoDimensions(videoFile);
+          const suffix = getFileSuffix(videoFile.name || videoFile.path);
+          setFiles([
+            {
+              video: videoFile,
+              size: videoFile.size,
+              width,
+              height,
+              suffix,
+              type: "video",
+            },
+          ]);
+          const generatedThumbnail = await generateThumbnail(videoFile);
+          setThumbnail(generatedThumbnail);
+          // setFiles([{ video: videoFile }]);
+        } else {
+          message.error("You can only upload one video.");
+        }
+      }
+    },
+    [files, fileType]
+  );
+
+  const { getRootProps, getInputProps } = useDropzone({
+    accept: fileType === "image" ? { "image/*": [] } : { "video/*": [] },
+    onDrop,
+  });
 
   const onChange = (e) => {
     if (e.target.checked) {
@@ -148,336 +377,268 @@ const Fileupload = ({
     }
   };
 
+  const handleRemoveFile = (fileToRemove) => {
+    if (fileType === "image") {
+      if (files[0].resourceURL) {
+        setFiles((prevFiles) =>
+          prevFiles.filter((file) => file !== fileToRemove)
+        );
+      } else {
+        setFiles((prevFiles) =>
+          prevFiles.filter((file) => file.image !== fileToRemove)
+        );
+      }
+    } else {
+      if (files[0].resourceURL) {
+        setFiles((prevFiles) =>
+          prevFiles.filter((file) => file !== fileToRemove)
+        );
+      } else {
+        setFiles((prevFiles) =>
+          prevFiles.filter((file) => file.video !== fileToRemove)
+        );
+      }
+    }
+  };
+
+  const moveFile = (fromIndex, toIndex) => {
+    setFiles((prevFiles) => {
+      const updatedFiles = [...prevFiles];
+      const [movedFile] = updatedFiles.splice(fromIndex, 1);
+      updatedFiles.splice(toIndex, 0, movedFile);
+      return updatedFiles;
+    });
+  };
+
+  const getImageDimensions = (file) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        resolve({ width: img.width.toString(), height: img.height.toString() });
+      };
+      img.src = URL.createObjectURL(file); // Set the source to a temporary URL of the image file
+    });
+  };
+
+  const getVideoDimensions = (file) => {
+    return new Promise((resolve) => {
+      const video = document.createElement("video");
+      video.onloadedmetadata = () => {
+        resolve({
+          width: video.videoWidth.toString(),
+          height: video.videoHeight.toString(),
+        });
+      };
+      video.src = URL.createObjectURL(file); // Set the source to a temporary URL of the video file
+    });
+  };
+
   const getFileExtension = (filename) => {
     return filename.split(".").pop();
   };
-  const getVideoDurationFromUrl = (videoUrl) => {
-    return new Promise((resolve, reject) => {
-      const video = document.createElement("video");
-      video.src = videoUrl;
-      video.onloadedmetadata = () => {
-        resolve(video.duration); // Convert duration to milliseconds
-      };
-      video.onerror = () => {
-        reject("Error loading video file for duration calculation.");
-      };
-    });
+
+  const getFileSuffix = (filePath) => {
+    const parts = filePath.split(".");
+    return parts.length > 1 ? parts[parts.length - 1] : ""; // Get the last part after the dot
   };
-  const removeFileExtension = (filename) => {
-    const dotIndex = filename.lastIndexOf(".");
-    if (dotIndex === -1) {
-      return filename; // If no dot is found, return the filename as is
-    }
-    return filename.substring(0, dotIndex); // Return the part before the last dot
-  };
-
-  /**
-   * 生成金山云 CDN 鉴权 URL (React 版本)
-   *
-   * @param {string} baseUrl - 例如 http://ksyun.cdn.com
-   * @param {string} path - 例如 /home/test.dat
-   * @param {string} secret - 主或备秘钥
-   * @param {number} [expireIn=300] - 有效期（秒），默认 300 秒
-   * @param {number} [type=1] - 鉴权类型（1 或 2）
-   * @returns {string}
-   */
-  function generateKsCdnAuthUrl(
-    baseUrl,
-    path,
-    secret,
-    expireIn = 3600,
-    type = 1
-  ) {
-    const timestamp = Math.floor(Date.now() / 1000) + expireIn;
-
-    const normalizedPath = "/" + path.replace(/^\/+/, "");
-    const normalizedBaseUrl = baseUrl.replace(/\/+$/, "");
-    const sign = md5(secret + normalizedPath + timestamp);
-
-    if (type === 1) {
-      return `${normalizedBaseUrl}${normalizedPath}?t=${timestamp}&k=${sign}`;
-    } else {
-      return `${normalizedBaseUrl}/${sign}/${timestamp}${normalizedPath}`;
-    }
-  }
+  console.log(score);
 
   const handleSubmit = async () => {
     setLoading(true);
     setUploadPercentage(0);
 
-    if (!description) {
-      message.error("Description is required!");
-      setLoading(false);
-      return;
-    }
+    if (description && files.length > 0) {
+      if (fileType === "image" || (fileType === "video" && thumbnail)) {
+        try {
+          const response = await axios.get(
+            "http://movie_upload_api.qdhgtch.com:5343/uploadv2.php"
+          );
+          const {
+            accessKeyId,
+            secretAccessKey,
+            sessionToken,
+            region,
+            bucket,
+            publicUrl,
+            directory,
+          } = response.data;
 
-    const resetForm = () => {
-      setIs_recommend(0);
-      setIs_top(0);
-      setDescription("");
-      setFiles([]);
-      setThumbnail(null);
-      setPage(1);
-      refetch();
-      setEditingPost(null);
-      closeDiv(false);
-      setLoading(false);
-    };
-
-    const handleSuccessMessage = () => {
-      message.success(
-        post ? "Post updated successfully." : "Post created successfully."
-      );
-    };
-
-    const handleError = (error) => {
-      console.error("Upload failed:", error);
-      message.error("Failed to submit post. Please try again.");
-      setLoading(false);
-    };
-
-    const preparePostPayload = (uploadedFileUrls = []) => ({
-      is_top,
-      is_recommend,
-      type: "post",
-      user_id: user_id === "custom" ? +customInput : +user_id,
-      description,
-      files: uploadedFileUrls,
-      file_type: fileType,
-      status,
-      ...(score && score !== "" && { score }),
-      ...(post && { post_id: post.id }),
-    });
-
-    try {
-      if (fileType === "text") {
-        const postPayload = preparePostPayload();
-        setUploadPercentage(100);
-        await createPost(postPayload).unwrap();
-        handleSuccessMessage();
-        resetForm();
-        return;
-      }
-
-      if (
-        fileType !== "image" &&
-        fileType !== "video" &&
-        fileType !== "audio"
-      ) {
-        message.error("Invalid file type!");
-        setLoading(false);
-        return;
-      }
-
-      if (fileType === "video" && !thumbnail) {
-        message.error("Thumbnail and Video are required!");
-        setLoading(false);
-        return;
-      }
-
-      const response = await axios.get(
-        // "http://movie_upload_v2.qdhgtch.com:5343/uploadv2.php"
-        "http://movie_upload_api.qdhgtch.com:5343/uploadv2.php"
-      );
-      const {
-        accessKeyId,
-        secretAccessKey,
-        sessionToken,
-        region,
-        bucket,
-        publicUrl,
-        directory,
-        imageUrl,
-      } = response.data;
-
-      const s3 = new S3Client({
-        region,
-        credentials: { accessKeyId, secretAccessKey, sessionToken },
-      });
-
-      const uploadFileToS3 = async (file, key, contentType) => {
-        const uploadParams = {
-          Bucket: bucket,
-          Key: `${directory}/${key}`,
-          Body: file,
-          ContentType: contentType,
-          ContentDisposition: "inline",
-        };
-
-        const upload = new Upload({
-          client: s3,
-          leavePartsOnError: false,
-          params: uploadParams,
-        });
-
-        return new Promise((resolve, reject) => {
-          upload.on("httpUploadProgress", (progressEvent) => {
-            const progress = Math.round(
-              (progressEvent.loaded / progressEvent.total) * 100
-            );
-            setUploadPercentage(progress);
+          // Create an S3 client
+          const s3 = new S3Client({
+            region,
+            credentials: {
+              accessKeyId,
+              secretAccessKey,
+              sessionToken,
+            },
           });
 
-          upload.done().then(resolve).catch(reject);
-        });
-      };
+          const uploadedFileUrls = [];
+          let totalFiles = files.length;
+          let uploadedFiles = 0;
+          let totalProgress = 0;
 
-      const uploadedFileUrls = [];
-      for (const file of files) {
-        if (file?.resourceURL) {
-          if (file?.type === "video") {
-            const a = config?.data?.post_public_url;
-            const b = file?.resourceURL;
-            const cdnUrl = generateKsCdnAuthUrl(
-              a,
-              b,
-              config?.data?.social_cdn_secret,
-              config?.data?.social_cdn_expire,
-              config?.data?.social_cdn_type
-            );
-            const duration = await getVideoDurationFromUrl(cdnUrl);
+          // Iterate over files and upload
+          for (const file of files) {
+            if (file?.resourceURL) {
+              uploadedFileUrls.push(file);
+              uploadedFiles++;
+              totalProgress = Math.round((uploadedFiles / totalFiles) * 100);
+              setUploadPercentage(totalProgress);
+              continue; // Skip upload for already uploaded files
+            }
 
-            file.duration = Math.floor(duration).toString(); // Use Math.floor to round down
+            const isImage = fileType === "image";
+            const key = isImage
+              ? `image_${Date.now()}_${Math.random()
+                  .toString(36)
+                  .substr(2, 9)}.${file.suffix}`
+              : `video_${Date.now()}_${Math.random()
+                  .toString(36)
+                  .substr(2, 9)}.${file.suffix}`;
+            const fileContent = file.image || file.video;
+            const contentType = isImage ? file.image?.type : file.video?.type;
+
+            const uploadParams = {
+              Bucket: bucket,
+              Key: `${directory}/${key}`,
+              Body: fileContent,
+              ContentType: contentType,
+              ContentDisposition: "inline",
+            };
+
+            // Use @aws-sdk/lib-storage for large file uploads with progress
+            const upload = new Upload({
+              client: s3,
+              leavePartsOnError: false,
+              params: uploadParams,
+            });
+
+            // Track upload progress
+            upload.on("httpUploadProgress", (progressEvent) => {
+              const progress = Math.round(
+                (progressEvent.loaded / progressEvent.total) * 100
+              );
+              totalProgress = Math.round(
+                ((uploadedFiles + progress / 100) / totalFiles) * 100
+              );
+              setUploadPercentage(totalProgress); // Update global progress
+            });
+
+            // Wait for upload to finish
+            await upload.done();
+
+            const metadata = {
+              resourceURL: `${publicUrl}${directory}/${key}`,
+              size: file?.size.toString(),
+              height: file?.height || "",
+              width: file?.width || "",
+              suffix: file?.suffix,
+              type: isImage ? "image" : "video",
+            };
+
+            uploadedFileUrls.push(metadata);
+            uploadedFiles++;
+            totalProgress = Math.round((uploadedFiles / totalFiles) * 100);
+            setUploadPercentage(totalProgress); // Update global progress
           }
 
-          uploadedFileUrls.push(file);
-          continue;
-        }
+          // Handle thumbnail upload (if applicable)
+          if (fileType === "video" && thumbnail) {
+            if (typeof thumbnail !== "string") {
+              const thumbnailKey = `thumbnail_${Date.now()}_${Math.random()
+                .toString(36)
+                .substr(2, 9)}.${getFileExtension(thumbnail.name)}`;
+              const thumbnailParams = {
+                Bucket: bucket,
+                Key: `${directory}/${thumbnailKey}`,
+                Body: thumbnail,
+                ContentType: thumbnail?.type,
+                ContentDisposition: "inline",
+              };
 
-        const isImage = fileType === "image";
-        const key = `${
-          isImage ? "image" : "video"
-        }_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${
-          file.suffix
-        }`;
-        const fileContent = isImage ? file.image : file.video;
-        const contentType = isImage ? file.image?.type : file.video?.type;
+              const thumbnailUpload = new Upload({
+                client: s3,
+                leavePartsOnError: false,
+                params: thumbnailParams,
+              });
 
-        await uploadFileToS3(fileContent, key, contentType);
+              thumbnailUpload.on("httpUploadProgress", (progressEvent) => {
+                const progress = Math.round(
+                  (progressEvent.loaded / progressEvent.total) * 100
+                );
+                totalProgress = Math.round(
+                  ((uploadedFiles + progress / 100) / totalFiles) * 100
+                );
+                setUploadPercentage(totalProgress); // Update global progress
+              });
 
-        const path_img = `/${directory}/${key}`;
+              await thumbnailUpload.done();
+              const thumbnailUrl = `${publicUrl}${directory}/${thumbnailKey}`;
 
-        const path_vod = `/${directory}/${key}`;
+              if (
+                uploadedFileUrls.length > 0 &&
+                uploadedFileUrls[0].type === "video"
+              ) {
+                uploadedFileUrls[0].thumbnail = thumbnailUrl;
+              }
+            } else {
+              if (
+                uploadedFileUrls.length > 0 &&
+                uploadedFileUrls[0].type === "video"
+              ) {
+                uploadedFileUrls[0].thumbnail = thumbnail;
+              }
+            }
+          }
 
-        const resourceURL = `${isImage ? path_img : path_vod}`;
-        console.log(resourceURL, " resourceURL");
+          // Handle final post submission
+          const postPayload = {
+            is_top,
+            is_recommend,
+            user_id: user_id === "custom" ? +customInput : +user_id,
+            description,
+            files: uploadedFileUrls,
+            file_type: fileType,
+            status,
+            ...(score && score !== "" && { score }), // Conditionally add score if it's not an empty string
+            ...(post && { post_id: post.id }),
+          };
+          console.log(postPayload);
 
-        if (!isImage) {
-          const a = config?.data?.post_public_url;
-          const b = resourceURL;
-          const cdnUrl = generateKsCdnAuthUrl(
-            a,
-            b,
-            config?.data?.social_cdn_secret,
-            config?.data?.social_cdn_expire,
-            config?.data?.social_cdn_type
+          await createPost(postPayload).unwrap();
+          setIs_recommend(0);
+          setIs_top(0);
+          setDescription("");
+          setFiles([]);
+          setThumbnail(null);
+          setPage(1);
+          refetch();
+          setEditingPost(null);
+          closeDiv(false);
+          message.success(
+            post ? "Post updated successfully." : "Post created successfully."
           );
-          // const duration = await getVideoDurationFromUrl(
-          //   `${config?.data?.post_public_url}${resourceURL}`
-          // );
-          const duration = await getVideoDurationFromUrl(cdnUrl);
-          uploadedFileUrls.push({
-            resourceURL,
-            duration: Math.floor(duration).toString(),
-            size: file?.size.toString(),
-            height: file?.height || "",
-            width: file?.width || "",
-            suffix: file?.suffix,
-            type: isImage ? "image" : "video",
-          });
-        } else {
-          uploadedFileUrls.push({
-            resourceURL,
-            size: file?.size.toString(),
-            height: file?.height || "",
-            width: file?.width || "",
-            suffix: file?.suffix,
-            type: isImage ? "image" : "video",
-          });
+          setLoading(false);
+        } catch (error) {
+          console.error("Upload failed:", error);
+          message.error("Failed to submit post. Please try again.");
+          setLoading(false);
         }
+      } else {
+        message.error("Thumbnail and Video are required!");
+        setLoading(false);
       }
-
-      if (fileType === "video" && thumbnail) {
-        if (typeof thumbnail === "string") {
-          uploadedFileUrls[0].thumbnail = thumbnail;
-        } else {
-          const thumbnailKey = `thumbnail_${Date.now()}_${Math.random()
-            .toString(36)
-            .substr(2, 9)}.${getFileExtension(thumbnail.name)}`;
-          await uploadFileToS3(thumbnail, thumbnailKey, thumbnail.type);
-          let img_url = `/${directory}/${thumbnailKey}`;
-          // let img_url = `${
-          //   config?.data?.post_image_url ? config.data.post_image_url : imageUrl
-          // }${directory}/${thumbnailKey}`;
-          // let img_url = `${
-          //   config?.data?.post_image_url
-          //     ? config.data.post_image_url.endsWith("/")
-          //       ? config.data.post_image_url
-          //       : `${config.data.post_image_url}/`
-          //     : imageUrl.endsWith("/")
-          //     ? imageUrl
-          //     : `${imageUrl}/`
-          // }${directory}/${thumbnailKey}`;
-          // const thumbnailUrl = `${imageUrl}${directory}/${thumbnailKey}`;
-          uploadedFileUrls[0].thumbnail = img_url;
-        }
-      }
-
-      // Handle audio file
-      if (fileType === "audio" && audioFile) {
-        const audio_key = `${removeFileExtension(
-          audioFile.name
-        )}_${Date.now()}.${getFileExtension(audioFile.name)}`;
-        await uploadFileToS3(audioFile, audio_key, audioFile.type);
-
-        // let audio_url = `${
-        //   config?.data?.post_public_url?.endsWith("/")
-        //     ? config.data.post_public_url
-        //     : `${config?.data?.post_public_url || publicUrl}/`
-        // }${directory}/${audio_key}`;
-        // let audio_url = `${
-        //   config?.data?.post_public_url
-        //     ? config.data.post_public_url
-        //     : publicUrl
-        // }${directory}/${audio_key}`;
-
-        let audio_url = `/${directory}/${audio_key}`;
-        // Create an Audio element to get the duration
-        const audio = new Audio(URL.createObjectURL(audioFile));
-
-        // Wait until the metadata is loaded before proceeding
-        const audioDuration = await new Promise((resolve, reject) => {
-          audio.onloadedmetadata = () => {
-            resolve(audio.duration); // Return duration when loaded
-          };
-          audio.onerror = () => {
-            reject("Error loading audio file for duration calculation.");
-          };
-        });
-
-        const audioDurationString = audioDuration.toString();
-
-        // Push audio info to the uploadedFileUrls array
-        uploadedFileUrls.push({
-          resourceURL: audio_url,
-          duration: audioDurationString, // Duration in seconds
-        });
-      }
-
-      const postPayload = preparePostPayload(uploadedFileUrls);
-
-      await createPost(postPayload).unwrap();
-      handleSuccessMessage();
-      resetForm();
-    } catch (error) {
-      handleError(error);
+    } else {
+      message.error("Description and Files are required!");
+      setLoading(false);
     }
   };
 
   useEffect(() => {
     if (user_id === "custom") {
       setCustomStatus(true);
-      // setCustomInput(""); // Reset the custom input field when "custom" is selected
+      setCustomInput(""); // Reset the custom input field when "custom" is selected
     } else {
       setCustomStatus(false);
     }
@@ -488,362 +649,243 @@ const Fileupload = ({
   };
 
   return (
-    // <DndProvider backend={HTML5Backend}>
-    <>
-      <TextArea
-        type="text"
-        placeholder="Write Description..."
-        className="w-full p-2 my-5 bg-transparent des"
-        onChange={(e) => setDescription(e.target.value)}
-        value={description}
-        rows={4}
-      />
-      <div>
-        <label className="mr-2">Score</label>
-        <InputNumber
-          value={score}
-          placeholder="Enter score"
-          className="mb-3 w-[200px]"
-          onChange={(value) => setScore(value)}
+    <DndProvider backend={HTML5Backend}>
+      <div className="file-upload-container">
+        <TextArea
+          type="text"
+          placeholder="Write Description..."
+          className="w-full p-2 my-5 bg-transparent des"
+          onChange={(e) => setDescription(e.target.value)}
+          value={description}
+          rows={4}
         />
-      </div>
+        <div>
+          <label className="mr-2">Score</label>
+          <InputNumber
+            value={score}
+            placeholder="Enter score"
+            className="mb-3 w-[200px]"
+            onChange={(value) => setScore(value)}
+          />
+        </div>
 
-      <Select
-        value={fileType}
-        onChange={(value) => {
-          setFileType(value);
-          setFiles([]);
-          setThumbnail(null);
-        }}
-        style={{ marginBottom: 10, marginRight: 10 }}
-      >
-        <Option value="image">Images</Option>
-        <Option value="video">Videos</Option>
-        <Option value="audio">Auido</Option>
-        <Option value="text">Text</Option>
-      </Select>
-      <Select
-        value={status}
-        onChange={(value) => {
-          setStatus(value);
-        }}
-        style={{ marginBottom: 10, marginRight: 10 }}
-      >
-        <Option value="published">Published</Option>
-        <Option value="review">Review</Option>
-        <Option value="declined">Declined</Option>
-      </Select>
-      <Select
-        value={user_id} // Bind selected user_id here
-        onChange={(value) => setUserId(value)} // Update user_id on selection
-        placeholder="Select User"
-        style={{ marginBottom: 10, marginRight: 10, width: 120 }}
-        loading={isUsersLoading || isUserLoading} // Show loading state when fetching users
-      >
-        {users?.map((user) => (
-          <Option key={user.id} value={user.id}>
-            {user.nickname}
-          </Option>
-        ))}
-        <Option value={"custom"}>Custom id</Option>
-      </Select>
-      {customStatus && (
-        <Input
-          className="w-[150px] my-2 mr-2"
-          placeholder="Enter userId"
-          value={customInput} // If it's "custom", clear the input
-          onChange={handleInputChange}
-        />
-      )}
-      <Checkbox
-        onChange={onChange}
-        checked={is_recommend === 1 ? true : false}
-        style={{ marginBottom: 10, marginRight: 10 }}
-      >
-        Recommend
-      </Checkbox>
-      <Checkbox
-        onChange={onChangeTop}
-        checked={is_top === 1 ? true : false}
-        style={{ marginBottom: 10, marginRight: 10 }}
-      >
-        Top Pick
-      </Checkbox>
-
-      <div className="flex items-center justify-between">
-        <div></div>
-        <Button
-          onClick={handleSubmit}
-          className={`absolute right-0 bottom-0 mt-2 ${
-            loading ? "hover:bg-transparent" : "save"
-          }`}
-          type="primary"
-          disabled={loading}
+        <Select
+          value={fileType}
+          onChange={(value) => {
+            setFileType(value);
+            setFiles([]);
+            setThumbnail(null);
+          }}
+          style={{ marginBottom: 10, marginRight: 10 }}
         >
-          {loading ? "Loading..." : post ? "Update Post" : "Save Post"}
-        </Button>
+          <Option value="image">Images</Option>
+          <Option value="video">Videos</Option>
+        </Select>
+        <Select
+          value={status}
+          onChange={(value) => {
+            setStatus(value);
+          }}
+          style={{ marginBottom: 10, marginRight: 10 }}
+        >
+          <Option value="published">Published</Option>
+          <Option value="review">Review</Option>
+          <Option value="declined">Declined</Option>
+        </Select>
+        <Select
+          value={user_id} // Bind selected user_id here
+          onChange={(value) => setUserId(value)} // Update user_id on selection
+          placeholder="Select User"
+          style={{ marginBottom: 10, marginRight: 10, width: 120 }}
+          loading={isUsersLoading || isUserLoading} // Show loading state when fetching users
+        >
+          {users?.map((user) => (
+            <Option key={user.id} value={user.id}>
+              {user.nickname}
+            </Option>
+          ))}
+          <Option value={"custom"}>Custom id</Option>
+        </Select>
+        {customStatus && (
+          <Input
+            className="w-[150px] my-2 mr-2"
+            placeholder="Enter userId"
+            value={customInput} // If it's "custom", clear the input
+            onChange={handleInputChange}
+          />
+        )}
+        <Checkbox
+          onChange={onChange}
+          checked={is_recommend === 1 ? true : false}
+          style={{ marginBottom: 10, marginRight: 10 }}
+        >
+          Recommend
+        </Checkbox>
+        <Checkbox
+          onChange={onChangeTop}
+          checked={is_top === 1 ? true : false}
+          style={{ marginBottom: 10, marginRight: 10 }}
+        >
+          Top Pick
+        </Checkbox>
+
+        <div
+          className={
+            fileType === "video" ? "grid grid-cols-2 max-md:grid-cols-1" : ""
+          }
+        >
+          <div>
+            <div>
+              <p className="my-2">
+                Click to select {fileType === "image" ? "images" : "a video"}{" "}
+                file{" "}
+                {fileType === "image"
+                  ? `(Max ${MAX_IMAGES} images)`
+                  : "(1 video allowed)"}
+              </p>
+              <p className="support">
+                {fileType === "image"
+                  ? "Support format: JPG, PNG"
+                  : "Support format: MP4"}
+              </p>
+            </div>
+            <div className="mt-5 preview-container">
+              <div {...getRootProps()} className="dropzone">
+                <div className="flex items-center justify-center">
+                  <input {...getInputProps()} />
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="13"
+                    height="13"
+                    viewBox="0 0 13 13"
+                    fill="none"
+                  >
+                    <path
+                      d="M12.0498 6.05005H7.5498V1.55005C7.5498 1.35114 7.47079 1.16037 7.33013 1.01972C7.18948 0.879067 6.99872 0.800049 6.7998 0.800049C6.60089 0.800049 6.41013 0.879067 6.26947 1.01972C6.12882 1.16037 6.0498 1.35114 6.0498 1.55005V6.05005H1.5498C1.35089 6.05005 1.16013 6.12907 1.01947 6.26972C0.878822 6.41037 0.799805 6.60114 0.799805 6.80005C0.799805 6.99896 0.878822 7.18973 1.01947 7.33038C1.16013 7.47103 1.35089 7.55005 1.5498 7.55005H6.0498V12.05C6.0498 12.249 6.12882 12.4397 6.26947 12.5804C6.41013 12.721 6.60089 12.8 6.7998 12.8C6.99872 12.8 7.18948 12.721 7.33013 12.5804C7.47079 12.4397 7.5498 12.249 7.5498 12.05V7.55005H12.0498C12.2487 7.55005 12.4395 7.47103 12.5801 7.33038C12.7208 7.18973 12.7998 6.99896 12.7998 6.80005C12.7998 6.60114 12.7208 6.41037 12.5801 6.26972C12.4395 6.12907 12.2487 6.05005 12.0498 6.05005Z"
+                      fill="white"
+                    />
+                  </svg>
+                </div>
+              </div>
+
+              {files.map((file, index) => (
+                <FilePreview
+                  key={index}
+                  file={file?.resourceURL ? file : file?.image || file?.video}
+                  index={index}
+                  moveFile={moveFile}
+                  onRemove={handleRemoveFile}
+                  type={fileType}
+                  handleVideoClick={handleVideoClick}
+                  handleImgClick={handleImgClick}
+                />
+              ))}
+            </div>
+          </div>
+
+          {fileType === "video" && (
+            <div className="mt-0 max-md:mt-2">
+              <div>
+                <p className="my-2">Select Thumbnail</p>
+                <p className="support">Support format : PNG, JPG</p>
+              </div>
+              <div className="preview-container">
+                <div {...getThumbnailRootProps()} className="mt-5 dropzone">
+                  <div className="flex items-center justify-center">
+                    <input {...getThumbnailInputProps()} />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="13"
+                      height="13"
+                      viewBox="0 0 13 13"
+                      fill="none"
+                    >
+                      <path
+                        d="M12.0498 6.05005H7.5498V1.55005C7.5498 1.35114 7.47079 1.16037 7.33013 1.01972C7.18948 0.879067 6.99872 0.800049 6.7998 0.800049C6.60089 0.800049 6.41013 0.879067 6.26947 1.01972C6.12882 1.16037 6.0498 1.35114 6.0498 1.55005V6.05005H1.5498C1.35089 6.05005 1.16013 6.12907 1.01947 6.26972C0.878822 6.41037 0.799805 6.60114 0.799805 6.80005C0.799805 6.99896 0.878822 7.18973 1.01947 7.33038C1.16013 7.47103 1.35089 7.55005 1.5498 7.55005H6.0498V12.05C6.0498 12.249 6.12882 12.4397 6.26947 12.5804C6.41013 12.721 6.60089 12.8 6.7998 12.8C6.99872 12.8 7.18948 12.721 7.33013 12.5804C7.47079 12.4397 7.5498 12.249 7.5498 12.05V7.55005H12.0498C12.2487 7.55005 12.4395 7.47103 12.5801 7.33038C12.7208 7.18973 12.7998 6.99896 12.7998 6.80005C12.7998 6.60114 12.7208 6.41037 12.5801 6.26972C12.4395 6.12907 12.2487 6.05005 12.0498 6.05005Z"
+                        fill="white"
+                      />
+                    </svg>
+                  </div>
+                </div>
+                {thumbnail && (
+                  <>
+                    <div className="mt-5 thumbnail-preview">
+                      <img
+                        src={
+                          typeof thumbnail === "string"
+                            ? thumbnail
+                            : URL.createObjectURL(thumbnail)
+                        }
+                        alt="thumbnail preview"
+                        className="preview-image"
+                      />
+                      <button
+                        onClick={() => setThumbnail(null)}
+                        className="remove-btn"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="10"
+                          height="10"
+                          viewBox="0 0 10 10"
+                          fill="none"
+                        >
+                          <path
+                            d="M5 3.88906L8.88906 0L10 1.11094L6.11094 5L10 8.88906L8.88906 10L5 6.11094L1.11094 10L0 8.88906L3.88906 5L0 1.11094L1.11094 0L5 3.88906Z"
+                            fill="white"
+                            fillOpacity="0.8"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="flex items-center justify-between">
+          <div></div>
+          <Button
+            onClick={handleSubmit}
+            className={`mt-2 ${loading ? "hover:bg-transparent" : "save"}`}
+            type="primary"
+            disabled={loading}
+          >
+            {loading ? "Loading..." : post ? "Update Post" : "Save Post"}
+          </Button>
+        </div>
       </div>
-    </>
+      <Modal
+        visible={isModalOpen}
+        footer={null}
+        onCancel={closeModal}
+        title="Video Preview"
+        centered
+        width={400}
+      >
+        {currentVideo && (
+          <video
+            src={currentVideo}
+            controls
+            className="max-h-[450px] w-full mt-5"
+          />
+        )}
+      </Modal>
+      <Modal
+        visible={isModalOpenImg}
+        footer={null}
+        onCancel={closeModalImg}
+        title="Image Preview"
+        centered
+        width={400}
+      >
+        {currentImg && (
+          <img src={currentImg} className="max-h-[450px] w-full mt-5" />
+        )}
+      </Modal>
+    </DndProvider>
   );
 };
 
 export default Fileupload;
-
-// const handleSubmit = async () => {
-//   setLoading(true);
-//   setUploadPercentage(0);
-
-//   if (description) {
-//     if (fileType === "text") {
-//       try {
-//         // Handle final post submission
-//         const postPayload = {
-//           is_top,
-//           is_recommend,
-//           type: "post",
-//           user_id: user_id === "custom" ? +customInput : +user_id,
-//           description,
-//           files: [],
-//           file_type: fileType,
-//           status,
-//           ...(score && score !== "" && { score }), // Conditionally add score if it's not an empty string
-//           ...(post && { post_id: post.id }),
-//         };
-//         setUploadPercentage(100);
-
-//         await createPost(postPayload).unwrap();
-//         setIs_recommend(0);
-//         setIs_top(0);
-
-//         setDescription("");
-//         setFiles([]);
-//         setThumbnail(null);
-//         setPage(1);
-//         refetch();
-//         setEditingPost(null);
-//         closeDiv(false);
-//         message.success(
-//           post ? "Post updated successfully." : "Post created successfully."
-//         );
-//         setLoading(false);
-//       } catch (error) {
-//         console.error("Upload failed:", error);
-//         message.error("Failed to submit post. Please try again.");
-//         setLoading(false);
-//       }
-//     } else {
-//       if (fileType === "image" || (fileType === "video" && thumbnail)) {
-//         try {
-//           const response = await axios.get(
-//             "http://movie_upload_api.qdhgtch.com:5343/uploadv2.php"
-//           );
-//           const {
-//             accessKeyId,
-//             secretAccessKey,
-//             sessionToken,
-//             region,
-//             bucket,
-//             publicUrl,
-//             directory,
-//             imageUrl,
-//           } = response.data;
-
-//           // Create an S3 client
-//           const s3 = new S3Client({
-//             region,
-//             credentials: {
-//               accessKeyId,
-//               secretAccessKey,
-//               sessionToken,
-//             },
-//           });
-
-//           const uploadedFileUrls = [];
-//           let totalFiles = files.length;
-//           let uploadedFiles = 0;
-//           let totalProgress = 0;
-
-//           // Iterate over files and upload
-//           for (const file of files) {
-//             if (file?.resourceURL) {
-//               uploadedFileUrls.push(file);
-//               uploadedFiles++;
-//               totalProgress = Math.round((uploadedFiles / totalFiles) * 100);
-//               setUploadPercentage(totalProgress);
-//               continue; // Skip upload for already uploaded files
-//             }
-
-//             const isImage = fileType === "image";
-//             const key = isImage
-//               ? `image_${Date.now()}_${Math.random()
-//                   .toString(36)
-//                   .substr(2, 9)}.${file.suffix}`
-//               : `video_${Date.now()}_${Math.random()
-//                   .toString(36)
-//                   .substr(2, 9)}.${file.suffix}`;
-//             const fileContent = file.image || file.video;
-//             const contentType = isImage ? file.image?.type : file.video?.type;
-
-//             const uploadParams = {
-//               Bucket: bucket,
-//               Key: `${directory}/${key}`,
-//               Body: fileContent,
-//               ContentType: contentType,
-//               ContentDisposition: "inline",
-//             };
-
-//             // Use @aws-sdk/lib-storage for large file uploads with progress
-//             const upload = new Upload({
-//               client: s3,
-//               leavePartsOnError: false,
-//               params: uploadParams,
-//             });
-
-//             // Track upload progress
-//             upload.on("httpUploadProgress", (progressEvent) => {
-//               const progress = Math.round(
-//                 (progressEvent.loaded / progressEvent.total) * 100
-//               );
-//               totalProgress = Math.round(
-//                 ((uploadedFiles + progress / 100) / totalFiles) * 100
-//               );
-//               setUploadPercentage(totalProgress); // Update global progress
-//             });
-
-//             // Wait for upload to finish
-//             await upload.done();
-//             let metadata;
-
-//             if (isImage) {
-//               metadata = {
-//                 resourceURL: `${
-//                   config?.data?.post_image_url?.endsWith("/")
-//                     ? config.data.post_image_url
-//                     : `${config?.data?.post_image_url || imageUrl}/`
-//                 }${directory}/${key}`,
-
-//                 size: file?.size.toString(),
-//                 height: file?.height || "",
-//                 width: file?.width || "",
-//                 suffix: file?.suffix,
-//                 type: isImage ? "image" : "video",
-//               };
-//             } else {
-//               metadata = {
-//                 resourceURL: `${
-//                   config?.data?.post_public_url?.endsWith("/")
-//                     ? config.data.post_public_url
-//                     : `${config?.data?.post_public_url || publicUrl}/`
-//                 }${directory}/${key}`,
-
-//                 size: file?.size.toString(),
-//                 height: file?.height || "",
-//                 width: file?.width || "",
-//                 suffix: file?.suffix,
-//                 type: isImage ? "image" : "video",
-//               };
-//             }
-
-//             uploadedFileUrls.push(metadata);
-//             uploadedFiles++;
-//             totalProgress = Math.round((uploadedFiles / totalFiles) * 100);
-//             setUploadPercentage(totalProgress); // Update global progress
-//           }
-
-//           // Handle thumbnail upload (if applicable)
-//           if (fileType === "video" && thumbnail) {
-//             if (typeof thumbnail !== "string") {
-//               const thumbnailKey = `thumbnail_${Date.now()}_${Math.random()
-//                 .toString(36)
-//                 .substr(2, 9)}.${getFileExtension(thumbnail.name)}`;
-//               const thumbnailParams = {
-//                 Bucket: bucket,
-//                 Key: `${directory}/${thumbnailKey}`,
-//                 Body: thumbnail,
-//                 ContentType: thumbnail?.type,
-//                 ContentDisposition: "inline",
-//               };
-
-//               const thumbnailUpload = new Upload({
-//                 client: s3,
-//                 leavePartsOnError: false,
-//                 params: thumbnailParams,
-//               });
-
-//               thumbnailUpload.on("httpUploadProgress", (progressEvent) => {
-//                 const progress = Math.round(
-//                   (progressEvent.loaded / progressEvent.total) * 100
-//                 );
-//                 totalProgress = Math.round(
-//                   ((uploadedFiles + progress / 100) / totalFiles) * 100
-//                 );
-//                 setUploadPercentage(totalProgress); // Update global progress
-//               });
-
-//               await thumbnailUpload.done();
-
-//               const thumbnailUrl = `${
-//                 config?.data?.post_image_url?.endsWith("/")
-//                   ? config.data.post_image_url
-//                   : `${config?.data?.post_image_url || imageUrl}/`
-//               }${directory}/${thumbnailKey}`;
-//               if (
-//                 uploadedFileUrls.length > 0 &&
-//                 uploadedFileUrls[0].type === "video"
-//               ) {
-//                 uploadedFileUrls[0].thumbnail = thumbnailUrl;
-//               }
-//             } else {
-//               if (
-//                 uploadedFileUrls.length > 0 &&
-//                 uploadedFileUrls[0].type === "video"
-//               ) {
-//                 uploadedFileUrls[0].thumbnail = thumbnail;
-//               }
-//             }
-//           }
-
-//           // Handle final post submission
-//           const postPayload = {
-//             is_top,
-//             is_recommend,
-//             type: "post",
-//             user_id: user_id === "custom" ? +customInput : +user_id,
-//             description,
-//             files: uploadedFileUrls,
-//             file_type: fileType,
-//             status,
-//             ...(score && score !== "" && { score }), // Conditionally add score if it's not an empty string
-//             ...(post && { post_id: post.id }),
-//           };
-
-//           await createPost(postPayload).unwrap();
-//           setIs_recommend(0);
-//           setIs_top(0);
-
-//           setDescription("");
-//           setFiles([]);
-//           setThumbnail(null);
-//           setPage(1);
-//           refetch();
-//           setEditingPost(null);
-//           closeDiv(false);
-//           message.success(
-//             post ? "Post updated successfully." : "Post created successfully."
-//           );
-//           setLoading(false);
-//         } catch (error) {
-//           console.error("Upload failed:", error);
-//           message.error("Failed to submit post. Please try again.");
-//           setLoading(false);
-//         }
-//       } else {
-//         message.error("Thumbnail and Video are required!");
-//         setLoading(false);
-//       }
-//     }
-//   } else {
-//     message.error("Description is required!");
-//     setLoading(false);
-//   }
-// };

@@ -1,12 +1,17 @@
 import { Button, Checkbox, Flex, Input, Select, Typography } from "antd";
 import { CheckboxChangeEvent } from "antd/es/checkbox";
 import TextArea from "antd/es/input/TextArea";
+<<<<<<< HEAD
 import { useState, useEffect, useCallback } from "react";
 import {
   useAllgetCreatorsQuery,
   useCreateWebViewPostMutation,
   useGetUserInfoQuery,
 } from "../services/postApi";
+=======
+import { useState, useCallback } from "react";
+import { useAllgetCreatorsQuery, useCreateWebViewPostMutation } from "../services/postApi";
+>>>>>>> 89579f1 (Resolve Conflict)
 import { useDropzone } from "react-dropzone";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
@@ -21,7 +26,10 @@ const MAX_VIDEOS = 1;
 const MAX_IMAGES = 9;
 
 interface CreateUnlockPostProps {
+<<<<<<< HEAD
   post: any;
+=======
+>>>>>>> 89579f1 (Resolve Conflict)
   onClose?: () => void;
   setLoading?: (loading: boolean) => void;
   loading?: boolean;
@@ -73,7 +81,10 @@ const FilePreview = ({ file, index, moveFile, onRemove, type }: any) => {
 };
 
 const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
+<<<<<<< HEAD
   post,
+=======
+>>>>>>> 89579f1 (Resolve Conflict)
   onClose,
   setLoading: setLoadingProp,
   loading: loadingProp,
@@ -84,11 +95,15 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
   const [is_recommend, setIs_recommend] = useState(0);
   const [is_top, setIs_top] = useState(0);
   const [user_id, setUserId] = useState<string | number | null>(null);
+<<<<<<< HEAD
   const { data: userData, isLoading: isUserLoading } =
     useGetUserInfoQuery(undefined);
   const { data, isLoading: isUsersLoading } = useAllgetCreatorsQuery({
     role: 0,
   });
+=======
+  const { data, isLoading: isUsersLoading } = useAllgetCreatorsQuery(undefined);
+>>>>>>> 89579f1 (Resolve Conflict)
   const users = data?.data?.list || [];
   const [localLoading, setLocalLoading] = useState(false);
   const [createWebViewPost] = useCreateWebViewPostMutation();
@@ -115,12 +130,15 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
   // Images state
   const [images, setImages] = useState<any[]>([]);
 
+<<<<<<< HEAD
   useEffect(() => {
     if (!post && userData) {
       setUserId(userData?.data.user_id);
     }
   }, [userData, post]);
 
+=======
+>>>>>>> 89579f1 (Resolve Conflict)
   // Utility functions
   const getImageDimensions = (
     file: File
@@ -349,6 +367,7 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
       message.error("Please select a user!");
       return;
     }
+<<<<<<< HEAD
     if (
       coverImages.length === 0 &&
       videos.length === 0 &&
@@ -357,6 +376,10 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
       message.error(
         "Please upload at least one file (cover image, video, or images)!"
       );
+=======
+    if (coverImages.length === 0 && videos.length === 0 && images.length === 0) {
+      message.error("Please upload at least one file (cover image, video, or images)!");
+>>>>>>> 89579f1 (Resolve Conflict)
       return;
     }
 
@@ -395,10 +418,15 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
 
       for (const fileItem of coverImages) {
         const file = fileItem.image;
+<<<<<<< HEAD
         const key = `image_${Date.now()}_${Math.random()
           .toString(36)
           .substr(2, 9)}.${fileItem.suffix}`;
 
+=======
+        const key = `image_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileItem.suffix}`;
+        
+>>>>>>> 89579f1 (Resolve Conflict)
         const uploadParams = {
           Bucket: bucket,
           Key: `${directory}/${key}`,
@@ -437,10 +465,15 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
       let videoURL = "";
       for (const fileItem of videos) {
         const file = fileItem.video;
+<<<<<<< HEAD
         const key = `video_${Date.now()}_${Math.random()
           .toString(36)
           .substr(2, 9)}.${fileItem.suffix}`;
 
+=======
+        const key = `video_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileItem.suffix}`;
+        
+>>>>>>> 89579f1 (Resolve Conflict)
         const uploadParams = {
           Bucket: bucket,
           Key: `${directory}/${key}`,
@@ -478,10 +511,15 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
       const uploadedImageFiles: any[] = [];
       for (const fileItem of images) {
         const file = fileItem.image;
+<<<<<<< HEAD
         const key = `image_${Date.now()}_${Math.random()
           .toString(36)
           .substr(2, 9)}.${fileItem.suffix}`;
 
+=======
+        const key = `image_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileItem.suffix}`;
+        
+>>>>>>> 89579f1 (Resolve Conflict)
         const uploadParams = {
           Bucket: bucket,
           Key: `${directory}/${key}`,
@@ -511,7 +549,11 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
         await upload.done();
 
         const resourceURL = `${publicUrl}${directory}/${key}`;
+<<<<<<< HEAD
 
+=======
+        
+>>>>>>> 89579f1 (Resolve Conflict)
         uploadedImageFiles.push({
           resourceURL,
           size: fileItem.size.toString(),
@@ -531,8 +573,12 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
         top_content: topContent,
         bottom_content: bottomContent,
         jump_url: websiteLink || "",
+<<<<<<< HEAD
         user_id:
           typeof user_id === "number" ? user_id : parseInt(user_id as string),
+=======
+        user_id: typeof user_id === "number" ? user_id : parseInt(user_id as string),
+>>>>>>> 89579f1 (Resolve Conflict)
         status,
         is_recommend,
         is_top,
@@ -567,7 +613,11 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
       await createWebViewPost(postPayload).unwrap();
 
       message.success("Post created successfully!");
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> 89579f1 (Resolve Conflict)
       // Reset form
       setTitle("");
       setDescription("");
@@ -582,10 +632,17 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
       setIs_recommend(0);
       setIs_top(0);
       setUserId(null);
+<<<<<<< HEAD
 
       setLoading(false);
       setUploadPercentage(0);
 
+=======
+      
+      setLoading(false);
+      setUploadPercentage(0);
+      
+>>>>>>> 89579f1 (Resolve Conflict)
       // Close modal if onClose is provided
       if (onClose) {
         onClose();
@@ -596,7 +653,11 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
       setLoading(false);
       setUploadPercentage(0);
     }
+<<<<<<< HEAD
   };
+=======
+  }
+>>>>>>> 89579f1 (Resolve Conflict)
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -700,11 +761,15 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
                 className="w-full p-2 bg-transparent title des"
                 type="number"
                 value={requirePoints || ""}
+<<<<<<< HEAD
                 onChange={(e) =>
                   setRequirePoints(
                     e.target.value ? parseInt(e.target.value) : null
                   )
                 }
+=======
+                onChange={(e) => setRequirePoints(e.target.value ? parseInt(e.target.value) : null)}
+>>>>>>> 89579f1 (Resolve Conflict)
               />
             </Flex>
             <Flex vertical gap={8} className="w-full">
