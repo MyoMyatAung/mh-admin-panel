@@ -1,17 +1,14 @@
 import { Button, Checkbox, Flex, Input, Select, Typography } from "antd";
 import { CheckboxChangeEvent } from "antd/es/checkbox";
 import TextArea from "antd/es/input/TextArea";
-<<<<<<< HEAD
 import { useState, useEffect, useCallback } from "react";
 import {
   useAllgetCreatorsQuery,
   useCreateWebViewPostMutation,
+  useUpdateWebViewPostMutation,
   useGetUserInfoQuery,
+  useGetDetailQuery,
 } from "../services/postApi";
-=======
-import { useState, useCallback } from "react";
-import { useAllgetCreatorsQuery, useCreateWebViewPostMutation } from "../services/postApi";
->>>>>>> 89579f1 (Resolve Conflict)
 import { useDropzone } from "react-dropzone";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
@@ -26,10 +23,7 @@ const MAX_VIDEOS = 1;
 const MAX_IMAGES = 9;
 
 interface CreateUnlockPostProps {
-<<<<<<< HEAD
-  post: any;
-=======
->>>>>>> 89579f1 (Resolve Conflict)
+  post_id: any;
   onClose?: () => void;
   setLoading?: (loading: boolean) => void;
   loading?: boolean;
@@ -81,10 +75,7 @@ const FilePreview = ({ file, index, moveFile, onRemove, type }: any) => {
 };
 
 const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
-<<<<<<< HEAD
-  post,
-=======
->>>>>>> 89579f1 (Resolve Conflict)
+  post_id,
   onClose,
   setLoading: setLoadingProp,
   loading: loadingProp,
@@ -95,18 +86,17 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
   const [is_recommend, setIs_recommend] = useState(0);
   const [is_top, setIs_top] = useState(0);
   const [user_id, setUserId] = useState<string | number | null>(null);
-<<<<<<< HEAD
   const { data: userData, isLoading: isUserLoading } =
     useGetUserInfoQuery(undefined);
   const { data, isLoading: isUsersLoading } = useAllgetCreatorsQuery({
     role: 0,
   });
-=======
-  const { data, isLoading: isUsersLoading } = useAllgetCreatorsQuery(undefined);
->>>>>>> 89579f1 (Resolve Conflict)
+  const { data: postData, isLoading: isPostLoading } = useGetDetailQuery(post_id, { skip: !post_id });
+  console.log("postData:", postData);
   const users = data?.data?.list || [];
   const [localLoading, setLocalLoading] = useState(false);
   const [createWebViewPost] = useCreateWebViewPostMutation();
+  const [updateWebViewPost] = useUpdateWebViewPostMutation();
 
   // Use prop loading state if provided, otherwise use local state
   const loading = loadingProp !== undefined ? loadingProp : localLoading;
@@ -130,15 +120,60 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
   // Images state
   const [images, setImages] = useState<any[]>([]);
 
-<<<<<<< HEAD
   useEffect(() => {
-    if (!post && userData) {
+    if (!post_id && userData) {
       setUserId(userData?.data.user_id);
     }
-  }, [userData, post]);
+  }, [userData, post_id]);
 
-=======
->>>>>>> 89579f1 (Resolve Conflict)
+  // Populate form when editing
+  useEffect(() => {
+    const post = postData?.data;
+    if (post && post.file_type === "web_view_post") {
+      setTitle(post.post_detail.title || "");
+      setDescription(post.description || "");
+      setTopContent(post.post_detail.top_content || "");
+      setBottomContent(post.post_detail.bottom_content || "");
+      setWebsiteLink(post.post_detail.jump_url || "");
+      setRequirePoints(post.point || null);
+      setLevel(post.level_id || null);
+      setStatus(post.status || "published");
+      setIs_recommend(post.is_recommend || 0);
+      setIs_top(post.is_top || 0);
+      setUserId(post.user.id || null);
+
+      // Load existing images (cover images)
+      if (post.post_detail.images && Array.isArray(post.post_detail.images)) {
+        const coverImageFiles = post.post_detail.images.map((url: string) => ({
+          resourceURL: url,
+          type: "image",
+        }));
+        setCoverImages(coverImageFiles);
+      }
+
+      // Load existing video
+      if (post.post_detail.video_url) {
+        setVideos([{
+          resourceURL: post.post_detail.video_url,
+          type: "video",
+        }]);
+      }
+
+      // Load existing files (images)
+      if (post.files && Array.isArray(post.files)) {
+        const imageFiles = post.files.map((file: any) => ({
+          resourceURL: file.resourceURL,
+          size: parseInt(file.size),
+          width: file.width,
+          height: file.height,
+          suffix: file.suffix,
+          type: file.type,
+        }));
+        setImages(imageFiles);
+      }
+    }
+  }, [postData]);
+
   // Utility functions
   const getImageDimensions = (
     file: File
@@ -367,7 +402,6 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
       message.error("Please select a user!");
       return;
     }
-<<<<<<< HEAD
     if (
       coverImages.length === 0 &&
       videos.length === 0 &&
@@ -376,12 +410,11 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
       message.error(
         "Please upload at least one file (cover image, video, or images)!"
       );
-=======
-    if (coverImages.length === 0 && videos.length === 0 && images.length === 0) {
-      message.error("Please upload at least one file (cover image, video, or images)!");
->>>>>>> 89579f1 (Resolve Conflict)
       return;
     }
+
+    const post = postData?.data;
+    const isEditMode = post && post.file_type === "web_view_post";
 
     setLoading(true);
     setUploadPercentage(0);
@@ -413,20 +446,25 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
 
       // Upload cover images separately
       const uploadedCoverImages: any[] = [];
-      const totalFiles = coverImages.length + videos.length + images.length;
+      // Only count new files for upload progress
+      const newCoverImages = coverImages.filter(f => !f.resourceURL);
+      const newVideos = videos.filter(f => !f.resourceURL);
+      const newImages = images.filter(f => !f.resourceURL);
+      const totalFiles = newCoverImages.length + newVideos.length + newImages.length;
       let uploadedCount = 0;
 
       for (const fileItem of coverImages) {
+        // If file already has resourceURL, keep it as is (existing file)
+        if (fileItem.resourceURL) {
+          uploadedCoverImages.push(fileItem.resourceURL);
+          continue;
+        }
+        
         const file = fileItem.image;
-<<<<<<< HEAD
         const key = `image_${Date.now()}_${Math.random()
           .toString(36)
           .substr(2, 9)}.${fileItem.suffix}`;
 
-=======
-        const key = `image_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileItem.suffix}`;
-        
->>>>>>> 89579f1 (Resolve Conflict)
         const uploadParams = {
           Bucket: bucket,
           Key: `${directory}/${key}`,
@@ -464,16 +502,17 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
       // Upload videos separately
       let videoURL = "";
       for (const fileItem of videos) {
+        // If video already has resourceURL, keep it as is (existing file)
+        if (fileItem.resourceURL) {
+          videoURL = fileItem.resourceURL;
+          continue;
+        }
+        
         const file = fileItem.video;
-<<<<<<< HEAD
         const key = `video_${Date.now()}_${Math.random()
           .toString(36)
           .substr(2, 9)}.${fileItem.suffix}`;
 
-=======
-        const key = `video_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileItem.suffix}`;
-        
->>>>>>> 89579f1 (Resolve Conflict)
         const uploadParams = {
           Bucket: bucket,
           Key: `${directory}/${key}`,
@@ -510,16 +549,24 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
       // Upload images (files) separately
       const uploadedImageFiles: any[] = [];
       for (const fileItem of images) {
+        // If image already has resourceURL, keep it as is (existing file)
+        if (fileItem.resourceURL) {
+          uploadedImageFiles.push({
+            resourceURL: fileItem.resourceURL,
+            size: fileItem.size?.toString() || "",
+            height: fileItem.height || "",
+            width: fileItem.width || "",
+            suffix: fileItem.suffix || "",
+            type: "image",
+          });
+          continue;
+        }
+        
         const file = fileItem.image;
-<<<<<<< HEAD
         const key = `image_${Date.now()}_${Math.random()
           .toString(36)
           .substr(2, 9)}.${fileItem.suffix}`;
 
-=======
-        const key = `image_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileItem.suffix}`;
-        
->>>>>>> 89579f1 (Resolve Conflict)
         const uploadParams = {
           Bucket: bucket,
           Key: `${directory}/${key}`,
@@ -549,11 +596,6 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
         await upload.done();
 
         const resourceURL = `${publicUrl}${directory}/${key}`;
-<<<<<<< HEAD
-
-=======
-        
->>>>>>> 89579f1 (Resolve Conflict)
         uploadedImageFiles.push({
           resourceURL,
           size: fileItem.size.toString(),
@@ -573,12 +615,8 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
         top_content: topContent,
         bottom_content: bottomContent,
         jump_url: websiteLink || "",
-<<<<<<< HEAD
         user_id:
           typeof user_id === "number" ? user_id : parseInt(user_id as string),
-=======
-        user_id: typeof user_id === "number" ? user_id : parseInt(user_id as string),
->>>>>>> 89579f1 (Resolve Conflict)
         status,
         is_recommend,
         is_top,
@@ -607,17 +645,21 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
         postPayload.level_id = level;
       }
 
+      // Add post_id if editing
+      if (isEditMode && post.id) {
+        postPayload.post_id = post.id;
+      }
+
       console.log("Payload:", postPayload);
 
       // Submit to API
-      await createWebViewPost(postPayload).unwrap();
-
-      message.success("Post created successfully!");
-<<<<<<< HEAD
-
-=======
-      
->>>>>>> 89579f1 (Resolve Conflict)
+      if (isEditMode) {
+        await updateWebViewPost(postPayload).unwrap();
+        message.success("Post updated successfully!");
+      } else {
+        await createWebViewPost(postPayload).unwrap();
+        message.success("Post created successfully!");
+      }
       // Reset form
       setTitle("");
       setDescription("");
@@ -632,17 +674,10 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
       setIs_recommend(0);
       setIs_top(0);
       setUserId(null);
-<<<<<<< HEAD
 
       setLoading(false);
       setUploadPercentage(0);
 
-=======
-      
-      setLoading(false);
-      setUploadPercentage(0);
-      
->>>>>>> 89579f1 (Resolve Conflict)
       // Close modal if onClose is provided
       if (onClose) {
         onClose();
@@ -653,11 +688,7 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
       setLoading(false);
       setUploadPercentage(0);
     }
-<<<<<<< HEAD
   };
-=======
-  }
->>>>>>> 89579f1 (Resolve Conflict)
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -761,15 +792,11 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
                 className="w-full p-2 bg-transparent title des"
                 type="number"
                 value={requirePoints || ""}
-<<<<<<< HEAD
                 onChange={(e) =>
                   setRequirePoints(
                     e.target.value ? parseInt(e.target.value) : null
                   )
                 }
-=======
-                onChange={(e) => setRequirePoints(e.target.value ? parseInt(e.target.value) : null)}
->>>>>>> 89579f1 (Resolve Conflict)
               />
             </Flex>
             <Flex vertical gap={8} className="w-full">
@@ -850,7 +877,7 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
               type="primary"
               disabled={loading}
             >
-              {loading ? "Loading..." : "Upload Post"}
+              {loading ? "Loading..." : (postData?.data && postData.data.file_type === "web_view_post" ? "Update Post" : "Upload Post")}
             </Button>
           </div>
         </Flex>

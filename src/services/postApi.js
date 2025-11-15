@@ -214,6 +214,20 @@ export const PostApi = createApi({
       }),
       transformResponse: (response) => response,
     }),
+    updateWebViewPost: builder.mutation({
+      query: (data) => ({
+        url: `panel/post/web-view/update`,
+        method: "POST",
+        body: generateData(data),
+      }),
+      transformResponse: (response) => response,
+    }),
+    getDetail: builder.query({
+      query: (id) => {
+        let url = `/post/detail?post_id=${id}`;
+        return convertToSecureUrl(url);
+      },
+    }),
   }),
 });
 
@@ -232,4 +246,6 @@ export const {
   useGetUserInfoQuery,
   useAllgetCreatorsQuery,
   useCreateWebViewPostMutation,
+  useUpdateWebViewPostMutation,
+  useGetDetailQuery,
 } = PostApi;

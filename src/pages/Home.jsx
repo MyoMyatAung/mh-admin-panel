@@ -23,7 +23,6 @@ import CreateUnlockPost from "../components/CreateUnlockPost";
 import { DatePicker } from "antd";
 import moment from "moment"; // For formatting dates
 import Form from "../components/Form";
-import CreateUnlockPost from "../components/CreateUnlockPost";
 
 const { Option } = Select;
 const { Search } = Input;
@@ -149,7 +148,13 @@ const Home = () => {
   const handleEdit = (post) => {
     setEditingPost(post); // Set post data to edit
     setModalKey((prevKey) => prevKey + 1); // Update key to force re-render
-    setFileUploadVisible(true); // Open modal
+    
+    // Check if post is web_view_post type
+    if (post.file_type === "web_view_post") {
+      setCreatePostUnlockVisible(true); // Open unlock post modal
+    } else {
+      setFileUploadVisible(true); // Open regular modal
+    }
   };
 
   const getStatusTag = (status) => {
@@ -635,9 +640,12 @@ const Home = () => {
             </Modal>
             <Modal
               key={modalKey} // Force re-render on key change
-              title={"Upload Unlockable Post"}
+              title={editingPost && editingPost.file_type === "web_view_post" ? "Edit Unlockable Post" : "Upload Unlockable Post"}
               visible={isCreatePostUnlockVisible}
-              onCancel={() => setCreatePostUnlockVisible(false)}
+              onCancel={() => {
+                setCreatePostUnlockVisible(false);
+                setEditingPost(null);
+              }}
               closable={!loading} // Disable close button while loading
               maskClosable={!loading}
               footer={null}
@@ -672,11 +680,11 @@ const Home = () => {
                   }}
                 >
                   <CreateUnlockPost
-<<<<<<< HEAD
-                    post={null}
-=======
->>>>>>> 89579f1 (Resolve Conflict)
-                    onClose={() => setCreatePostUnlockVisible(false)}
+                    post_id={editingPost?.id}
+                    onClose={() => {
+                      setCreatePostUnlockVisible(false);
+                      setEditingPost(null);
+                    }}
                     setLoading={setLoading}
                     loading={loading}
                     setUploadPercentage={setUploadPercentage}

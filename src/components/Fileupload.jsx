@@ -200,7 +200,7 @@ const Fileupload = ({
       setFiles([]);
       setThumbnail(null);
     }
-  }, [isVisible, post, users]);
+  }, [isVisible]);
 
   const generateThumbnail = (videoFile) => {
     return new Promise((resolve, reject) => {
