@@ -57,12 +57,37 @@ export const PostApi = createApi({
         return convertToSecureUrl(url);
       },
     }),
+    getConfig: builder.query({
+      query: () => {
+        let url = `/panel/social/config`;
+        return convertToSecureUrl(url);
+      },
+    }),
+
+    updateDomain: builder.mutation({
+      query: (data) => ({
+        url: `panel/social/config/save`,
+        method: "POST",
+        body: generateData(data),
+      }),
+      transformResponse: (response) => response,
+    }),
 
     getList: builder.query({
       query: (data) => {
-        const { page, status, q, type, filter, order } = data;
+        const {
+          page,
+          status,
+          q,
+          type,
+          filter,
+          order,
+          from_date,
+          to_date,
+          post_type,
+        } = data;
 
-        let url = `panel/post/list?page=${page}&status=${status}`;
+        let url = `panel/post/list?page=${page}&status=${status}&post_type=${post_type}`;
         if (q) {
           url += `&q=${encodeURIComponent(q)}&type=${type}`; // Append query parameter if it exists
         }
@@ -72,25 +97,33 @@ export const PostApi = createApi({
         if (filter !== "all" && filter !== "top") {
           url += `&order=${order}`;
         }
+        if (from_date) {
+          url += `&from_date=${from_date}`;
+        }
+        if (to_date) {
+          url += `&to_date=${to_date}`;
+        }
+
         return convertToSecureUrl(url);
       },
     }),
     getCommentList: builder.query({
       query: ({ page, id, q, type, status }) => {
         if (id) {
-          let url = `panel/post/comment/list?post_id=${id}&page=${page}&ignore_safe_check=true`;
+          let url = `panel/post/comment/list?post_id=${id}&page=${page}`;
           if (q) {
             url += `&q=${encodeURIComponent(q)}&type=${type}`; // Append query parameter if it exists
           }
           return convertToSecureUrl(url);
         } else {
-          let url = `panel/post/comment/list?&page=${page}`;
+          let url = `panel/post/comment/list?page=${page}`;
           if (q) {
             url += `&q=${encodeURIComponent(q)}&type=${type}`; // Append query parameter if it exists
           }
           if (status !== "all") {
             url += `&status=${status}`; // Append query parameter if it exists
           }
+
           return convertToSecureUrl(url);
         }
       },
@@ -111,6 +144,7 @@ export const PostApi = createApi({
           if (status !== "all") {
             url += `&status=${status}`; // Append query parameter if it exists
           }
+
           return convertToSecureUrl(url);
         }
       },
@@ -123,8 +157,8 @@ export const PostApi = createApi({
       },
     }),
     allgetCreators: builder.query({
-      query: () => {
-        return convertToSecureUrl(`panel/post/all/creator/list`);
+      query: ({ role }) => {
+        return convertToSecureUrl(`panel/post/all/creator/list?role=${role}}`);
       },
     }),
     actionCreator: builder.mutation({
@@ -184,6 +218,8 @@ export const PostApi = createApi({
 });
 
 export const {
+  useGetConfigQuery,
+  useUpdateDomainMutation,
   useCreatePostMutation,
   useDeletePostMutation,
   useGetListQuery,

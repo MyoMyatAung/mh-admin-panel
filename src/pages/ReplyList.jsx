@@ -20,6 +20,7 @@ import {
   useGetUserInfoQuery,
   useUpdateCommentMutation,
 } from "../services/postApi";
+import moment from "moment"; // For formatting dates
 
 const { Option } = Select;
 const { Search } = Input;
@@ -320,6 +321,13 @@ const ReplyList = () => {
                       title: "Create_time",
                       dataIndex: "create_time",
                       key: "create_time",
+                      render: (timestamp) => (
+                        <span>
+                          {timestamp
+                            ? moment(timestamp * 1000).format("YYYY-MM-DD")
+                            : "N/A"}
+                        </span>
+                      ),
                       width: 80,
                     },
                     {

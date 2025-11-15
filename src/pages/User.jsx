@@ -10,6 +10,7 @@ import {
 } from "antd";
 
 import Navbar from "../components/Navbar";
+import axios from "axios";
 
 import CreateUser from "../components/CreateUser";
 import {
@@ -45,12 +46,32 @@ const User = () => {
     });
   };
 
+  const fetchData = async (data) => {
+    try {
+      const response = await fetch(
+        "https://bfm11as9f.fuqiyun.cn/api/v1/panel/post/creator/action",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data),
+        }
+      );
+      const res = await response.json();
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   const handleDelete = async (id) => {
     try {
-      await actionUser({ user_id: id, status: 0 }).unwrap();
+      const res = await actionUser({ user_id: id, status: 0 }).unwrap();
+      await fetchData(res.data);
       refetch();
       message.success("Successfully delete this user");
     } catch (error) {
+      console.log(error);
       message.error("Failed to delete this user");
     }
   };

@@ -160,12 +160,12 @@
 }
 
 .description-column {
-  width: 100%; /* Default width */
+  width: 100% !important; /* Default width */
 }
 
 @media (max-width: 768px) {
   .description-column {
-    max-width: 150px;
+    max-width: 150px !important;
   }
 }
 

@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { message, Button, Input, Select } from "antd";
-import { useActionCreatorMutation } from "../services/postApi";
+import { generateData, useActionCreatorMutation } from "../services/postApi";
+import axios from "axios";
 
 const { Option } = Select;
 
 const CreateUser = ({ setLoading, loading, refetch, closeDiv, editUser }) => {
   const [user_id, setUserId] = useState("");
+  const [role, setRole] = useState("post");
   const [permissions, setPermissions] = useState({
     post: [],
     post_comment: [],
@@ -42,20 +44,42 @@ const CreateUser = ({ setLoading, loading, refetch, closeDiv, editUser }) => {
     post_reply: ["view", "update", "delete"],
   };
 
+  const fetchData = async (data) => {
+    try {
+      const response = await fetch(
+        "https://bfm11as9f.fuqiyun.cn/api/v1/panel/post/creator/action",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data),
+        }
+      );
+      const res = await response.json();
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   const handleSubmit = async () => {
     setLoading(true);
-    if (user_id && permissions) {
+    if (user_id && permissions && role) {
       try {
-        await createUser({
+        const res = await createUser({
           user_id,
           status: 1,
+          // role: role === "post" ? 0 : role === "ads" ? 2 : null,
           permission: permissions,
         }).unwrap();
+
+        await fetchData(res.data);
         refetch();
         closeDiv();
         message.success("User created successfully.");
         setLoading(false);
       } catch (error) {
+        console.log(error);
         message.error(
           error?.data?.msg || "Failed to create user. Please try again."
         );
@@ -139,6 +163,24 @@ const CreateUser = ({ setLoading, loading, refetch, closeDiv, editUser }) => {
           </Select>
         </div>
       </div>
+      {/* <div className="my-4 mt-6">
+        <div className="">
+          <label className="text-lg">Role</label>
+          <Select
+            placeholder="Select role for creator"
+            value={role}
+            onChange={(value) => setRole(value)}
+            className="w-full mt-3"
+          >
+            <Option key={"post"} value={"post"}>
+              Post Creator
+            </Option>
+            <Option key={"ads"} value={"ads"}>
+              Advertiser
+            </Option>
+          </Select>
+        </div>
+      </div> */}
 
       <div className="flex justify-between items-center">
         <div></div>

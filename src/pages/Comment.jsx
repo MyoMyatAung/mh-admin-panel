@@ -22,6 +22,7 @@ import {
   useUpdateCommentMutation,
 } from "../services/postApi";
 import { useParams } from "react-router-dom";
+import moment from "moment";
 
 const { Option } = Select;
 const { Search } = Input;
@@ -234,6 +235,11 @@ const Comment = () => {
       title: "Create_time",
       dataIndex: "create_time",
       key: "create_time",
+      render: (timestamp) => (
+        <span>
+          {timestamp ? moment(timestamp * 1000).format("YYYY-MM-DD") : "N/A"}
+        </span>
+      ),
       width: 80,
     },
 
@@ -565,6 +571,13 @@ const Comment = () => {
                       title: "Create_time",
                       dataIndex: "create_time",
                       key: "create_time",
+                      render: (timestamp) => (
+                        <span>
+                          {timestamp
+                            ? moment(timestamp * 1000).format("YYYY-MM-DD")
+                            : "N/A"}
+                        </span>
+                      ),
                       width: 80,
                     },
                     {

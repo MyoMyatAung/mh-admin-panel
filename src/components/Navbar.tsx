@@ -6,12 +6,18 @@ import { Button, Drawer, Menu, message } from "antd";
 import { MenuOutlined } from "@ant-design/icons";
 
 import { useDispatch } from "react-redux";
+import { useGetUserInfoQuery } from "../services/postApi";
 
 const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [drawerVisible, setDrawerVisible] = useState(false);
   const dispatch = useDispatch();
+  const { data: user, isLoading: isUserLoading } =
+    useGetUserInfoQuery(undefined);
+  const userData = user?.data;
+
+  const is_admin = userData?.is_admin;
 
   // Determine the active menu item based on the current path
   const activeKey = location.pathname.startsWith("/posts")
@@ -22,14 +28,23 @@ const Navbar = () => {
     ? "comments"
     : location.pathname.startsWith("/replies")
     ? "replies"
+    : location.pathname.startsWith("/ads")
+    ? "ads"
+    : location.pathname.startsWith("/setting")
+    ? "setting"
     : "posts";
 
   const menuItems = [
     { key: "posts", label: "Posts", path: "/" },
     { key: "users", label: "Users", path: "/users" },
     { key: "comments", label: "Comments", path: "/comments" },
+    { key: "ads", label: "Ads", path: "/ads" },
     { key: "replies", label: "Replies", path: "/replies" },
   ];
+
+  if (is_admin) {
+    menuItems.push({ key: "setting", label: "Setting", path: "/setting" });
+  }
 
   return (
     <div
