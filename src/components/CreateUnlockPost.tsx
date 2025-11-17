@@ -91,7 +91,10 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
   const { data, isLoading: isUsersLoading } = useAllgetCreatorsQuery({
     role: 0,
   });
-  const { data: postData, isLoading: isPostLoading } = useGetDetailQuery(post_id, { skip: !post_id });
+  const { data: postData, isLoading: isPostLoading } = useGetDetailQuery(
+    post_id,
+    { skip: !post_id }
+  );
   console.log("postData:", postData);
   const users = data?.data?.list || [];
   const [localLoading, setLocalLoading] = useState(false);
@@ -148,15 +151,17 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
           resourceURL: url,
           type: "image",
         }));
-        setCoverImages(coverImageFiles);
+        setCoverImages([coverImageFiles[0]]);
       }
 
       // Load existing video
       if (post.post_detail.video_url) {
-        setVideos([{
-          resourceURL: post.post_detail.video_url,
-          type: "video",
-        }]);
+        setVideos([
+          {
+            resourceURL: post.post_detail.video_url,
+            type: "video",
+          },
+        ]);
       }
 
       // Load existing files (images)
@@ -248,7 +253,14 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
 
   const handleRemoveCover = (fileToRemove: any) => {
     setCoverImages((prevFiles) =>
-      prevFiles.filter((file) => file.image !== fileToRemove)
+      prevFiles.filter((file) => {
+        // For existing files (from API), compare resourceURL
+        if (file.resourceURL && fileToRemove.resourceURL) {
+          return file.resourceURL !== fileToRemove.resourceURL;
+        }
+        // For new files, compare the File object
+        return file.image !== fileToRemove;
+      })
     );
   };
 
@@ -305,7 +317,14 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
 
   const handleRemoveVideo = (fileToRemove: any) => {
     setVideos((prevFiles) =>
-      prevFiles.filter((file) => file.video !== fileToRemove)
+      prevFiles.filter((file) => {
+        // For existing files (from API), compare resourceURL
+        if (file.resourceURL && fileToRemove.resourceURL) {
+          return file.resourceURL !== fileToRemove.resourceURL;
+        }
+        // For new files, compare the File object
+        return file.video !== fileToRemove;
+      })
     );
   };
 
@@ -359,7 +378,14 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
 
   const handleRemoveImage = (fileToRemove: any) => {
     setImages((prevFiles) =>
-      prevFiles.filter((file) => file.image !== fileToRemove)
+      prevFiles.filter((file) => {
+        // For existing files (from API), compare resourceURL
+        if (file.resourceURL && fileToRemove.resourceURL) {
+          return file.resourceURL !== fileToRemove.resourceURL;
+        }
+        // For new files, compare the File object
+        return file.image !== fileToRemove;
+      })
     );
   };
 
@@ -447,10 +473,11 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
       // Upload cover images separately
       const uploadedCoverImages: any[] = [];
       // Only count new files for upload progress
-      const newCoverImages = coverImages.filter(f => !f.resourceURL);
-      const newVideos = videos.filter(f => !f.resourceURL);
-      const newImages = images.filter(f => !f.resourceURL);
-      const totalFiles = newCoverImages.length + newVideos.length + newImages.length;
+      const newCoverImages = coverImages.filter((f) => !f.resourceURL);
+      const newVideos = videos.filter((f) => !f.resourceURL);
+      const newImages = images.filter((f) => !f.resourceURL);
+      const totalFiles =
+        newCoverImages.length + newVideos.length + newImages.length;
       let uploadedCount = 0;
 
       for (const fileItem of coverImages) {
@@ -459,7 +486,7 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
           uploadedCoverImages.push(fileItem.resourceURL);
           continue;
         }
-        
+
         const file = fileItem.image;
         const key = `image_${Date.now()}_${Math.random()
           .toString(36)
@@ -494,6 +521,7 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
         await upload.done();
 
         const resourceURL = `${publicUrl}${directory}/${key}`;
+        // const resourceURL = `${directory}/${key}`;
         uploadedCoverImages.push(resourceURL);
         uploadedCount++;
         setUploadPercentage(Math.round((uploadedCount / totalFiles) * 100));
@@ -507,7 +535,7 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
           videoURL = fileItem.resourceURL;
           continue;
         }
-        
+
         const file = fileItem.video;
         const key = `video_${Date.now()}_${Math.random()
           .toString(36)
@@ -542,6 +570,7 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
         await upload.done();
 
         videoURL = `${publicUrl}${directory}/${key}`;
+        // videoURL = `${directory}/${key}`;
         uploadedCount++;
         setUploadPercentage(Math.round((uploadedCount / totalFiles) * 100));
       }
@@ -561,7 +590,7 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
           });
           continue;
         }
-        
+
         const file = fileItem.image;
         const key = `image_${Date.now()}_${Math.random()
           .toString(36)
@@ -596,6 +625,7 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
         await upload.done();
 
         const resourceURL = `${publicUrl}${directory}/${key}`;
+        // const resourceURL = `${directory}/${key}`;
         uploadedImageFiles.push({
           resourceURL,
           size: fileItem.size.toString(),
@@ -624,7 +654,10 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
 
       // Add cover images as "images" field
       if (uploadedCoverImages.length > 0) {
-        postPayload.images = uploadedCoverImages;
+        postPayload.images = [
+          ...uploadedCoverImages,
+          uploadedImageFiles.map((f) => f.resourceURL),
+        ].flat();
       }
 
       // Add video URL
@@ -646,8 +679,8 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
       }
 
       // Add post_id if editing
-      if (isEditMode && post.id) {
-        postPayload.post_id = post.id;
+      if (isEditMode && post.post_id) {
+        postPayload.post_id = post.post_id;
       }
 
       console.log("Payload:", postPayload);
@@ -877,7 +910,11 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
               type="primary"
               disabled={loading}
             >
-              {loading ? "Loading..." : (postData?.data && postData.data.file_type === "web_view_post" ? "Update Post" : "Upload Post")}
+              {loading
+                ? "Loading..."
+                : postData?.data && postData.data.file_type === "web_view_post"
+                ? "Update Post"
+                : "Upload Post"}
             </Button>
           </div>
         </Flex>

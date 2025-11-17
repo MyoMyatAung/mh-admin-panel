@@ -216,7 +216,7 @@ export const PostApi = createApi({
     }),
     updateWebViewPost: builder.mutation({
       query: (data) => ({
-        url: `panel/post/web-view/update`,
+        url: `panel/post/web-view/edit`,
         method: "POST",
         body: generateData(data),
       }),
@@ -224,7 +224,7 @@ export const PostApi = createApi({
     }),
     getDetail: builder.query({
       query: (id) => {
-        let url = `/post/detail?post_id=${id}`;
+        let url = `/panel/post/detail?post_id=${id}`;
         return convertToSecureUrl(url);
       },
     }),

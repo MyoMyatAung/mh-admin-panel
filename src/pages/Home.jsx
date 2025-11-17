@@ -417,7 +417,7 @@ const Home = () => {
               style={{
                 marginTop: 20,
               }}
-              className="max-md:flex-col max-xl:flex-wrap max-md:items-start flex justify-between items-center"
+              className="max-md:flex-col flex-wrap max-xl:flex-wrap max-md:items-start flex justify-between items-center"
             >
               <div className="flex items-center max-xl:flex-wrap max-md:items-start">
                 {(is_admin === 1 || permission?.post?.includes("create")) && (
