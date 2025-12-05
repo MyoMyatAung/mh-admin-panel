@@ -468,6 +468,8 @@ const CreateUnlockPost: React.FC<CreateUnlockPostProps> = ({
           secretAccessKey,
           sessionToken,
         },
+        requestChecksumCalculation: "WHEN_REQUIRED",
+        responseChecksumValidation: "WHEN_REQUIRED",
       });
 
       // Upload cover images separately
